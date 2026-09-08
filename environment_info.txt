@@ -1,0 +1,33 @@
+NavRL-Static-UAV Version 1 validated environment
+Captured: 2026-08-24T15:35:30+08:00 (Asia/Shanghai)
+
+Operating system: Ubuntu 22.04.3 LTS
+Kernel: 6.8.0-136-generic
+GPU: NVIDIA GeForce RTX 4070 (12,282 MiB)
+NVIDIA driver: 580.173.02
+NVIDIA-SMI reported CUDA capability: 13.0
+
+Conda: 25.11.1
+Python: 3.11.15
+Isaac Sim: 5.1.0.0
+Isaac Lab source release: v2.3.2 (git 37ddf626871758333d6ed89cf64ad702aef127d0)
+Isaac Lab Python package: 0.54.2
+Isaac Lab RL package: 0.4.7
+PyTorch: 2.7.0+cu128
+PyTorch CUDA runtime: 12.8
+torch.cuda.is_available(): True
+torch CUDA device: NVIDIA GeForce RTX 4070
+RSL-RL: 3.1.2
+Gymnasium: 1.2.1
+NumPy: 1.26.0
+TensorBoard: 2.21.0
+
+Validated launcher: conda run -n isaaclab python
+Project install mode: python -m pip install --no-deps -e source/navrl_uav
+
+Dependency policy:
+- Isaac Sim, Isaac Lab, PyTorch, CUDA libraries, and RSL-RL are supplied by the
+  pre-validated isaaclab environment.
+- This project does not pin or reinstall torch/CUDA packages.
+- The extension is installed with --no-deps to prevent upstream metadata from
+  replacing the compatible Isaac Sim/Isaac Lab stack.

@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+logs/*
+!logs/.gitkeep
+
+
+# Runtime artifacts
+checkpoints/*
+!checkpoints/.gitkeep
+artifacts/*
+!artifacts/.gitkeep
+
+# Model binaries
+*.pt
+*.pth
+*.ckpt
+
+# Local backups
+*.bak

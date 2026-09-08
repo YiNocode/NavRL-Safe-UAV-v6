@@ -1,0 +1,18 @@
+[package]
+version = "0.5.0"
+category = "isaaclab"
+readme = "README.md"
+title = "NavRL Safe UAV V5"
+author = "NavRL-Safe-UAV-v5 developers"
+maintainer = "NavRL-Safe-UAV-v5 developers"
+description = "GPU-parallel sensor-only NavRL perception with direct UAV velocity control"
+repository = "https://github.com/Zhefan-Xu/NavRL"
+keywords = ["isaaclab", "reinforcement-learning", "uav", "navigation", "gpu", "depth-perception"]
+
+[dependencies]
+"isaaclab" = {}
+"isaaclab_rl" = {}
+"isaaclab_tasks" = {}
+
+[[python.module]]
+name = "navrl_uav_v5"

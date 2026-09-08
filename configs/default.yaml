@@ -1,0 +1,84 @@
+# V5 mirrors navrl_env_cfg.py and documents the runtime contract.
+task: Isaac-UAV-NavRL-V5-GPU-Direct-v0
+
+environment:
+  training_num_envs: 4096
+  evaluation_num_envs: 64
+  sim_dt_s: 0.01
+  decimation: 2
+  policy_frequency_hz: 50
+  episode_seconds: 12.0
+  static_obstacles: 40
+  dynamic_obstacles: 15
+  altitude:
+    takeoff_body_origin_m: 0.10
+    goal_height_range_m: [0.80, 1.60]
+    soft_ceiling_m: 1.80
+    hard_ceiling_m: 2.20
+    corridor_tolerance_m: 0.20
+    static_obstacle_height_range_m: [2.60, 5.00]
+  domain_randomization:
+    cadence: every episode reset
+    independent_per_environment: true
+    static_template_pool: 48
+    static_active_templates: 40
+    static_randomized: [template_shape, width, length, height, position]
+    dynamic_template_pool: 24
+    dynamic_active_templates: 15
+    dynamic_randomized: [template_shape, width, height, initial_position, goal, speed]
+    synchronize_sensor_and_tracker_reset: true
+    endpoint_clearance_m: 1.25
+
+control:
+  backend: direct_root_velocity
+  ros2: false
+  px4: false
+  action_distribution: beta
+  action_range: [0.0, 1.0]
+  velocity_limit_mps: [2.0, 2.0, 1.0]
+
+perception:
+  policy_uses_simulator_obstacle_truth: false
+  sensor: Isaac/Warp MultiMeshRayCaster depth returns
+  implementation_device: cuda
+  voxel:
+    voxel_size_m: 0.25
+    map_size_m: [20.0, 20.0, 5.0]
+    map_origin_local_m: [-10.0, -10.0, 0.0]
+  virtual_rays:
+    horizontal_fov_deg: 360.0
+    horizontal_step_deg: 10.0
+    vertical_fov_deg: 60.0
+    vertical_step_deg: 10.0
+    max_distance_m: 5.0
+    output_shape: [36, 7]
+  dynamic_tracking:
+    source: ego-compensated temporal depth residuals
+    max_tracks: 5
+    motion_threshold_m: 0.035
+    association_distance_m: 1.25
+    velocity_smoothing: 0.70
+
+observation:
+  static_obstacles: [num_envs, 36, 7]
+  internal_state: [num_envs, 8]
+  dynamic_obstacles: [num_envs, 5, 10]
+  raw_depth_is_policy_input: false
+
+policy:
+  static_encoder: CNN
+  static_embedding_dim: 128
+  dynamic_encoder: MLP
+  dynamic_embedding_dim: 64
+  fused_hidden_dims: [256, 256]
+
+ppo:
+  device: cuda:0
+  rollout_steps_per_env: 32
+  learning_epochs: 2
+  mini_batches: 8
+  learning_rate: 0.00002
+  gamma: 0.99
+  lambda: 0.95
+  clip_param: 0.1
+  max_iterations: 10000
