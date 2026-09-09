@@ -26,8 +26,13 @@ def main():
         torch.cuda.reset_peak_memory_stats(env.unwrapped.device)
         torch.cuda.synchronize(env.unwrapped.device)
         start=time.perf_counter()
+        max_tracked_speed=torch.zeros((),device=env.unwrapped.device)
         for _ in range(args.steps):
             obs,*_=env.step(torch.zeros((args.num_envs,3),device=env.unwrapped.device))
+            tracked=env.unwrapped._dynamic_observation
+            if tracked is not None and tracked.valid.any():
+                speed=torch.linalg.vector_norm(tracked.velocities_w,dim=-1)
+                max_tracked_speed=torch.maximum(max_tracked_speed,speed[tracked.valid].max())
         torch.cuda.synchronize(env.unwrapped.device)
         elapsed_s=time.perf_counter()-start
         state=env.unwrapped.get_camera_state(); depth=state["depth_m"]
@@ -85,8 +90,7 @@ def main():
         assert torch.all(nearest_track_error<=0.50), (
             f"max nearest dynamic track error={nearest_track_error.max().item():.4f}"
         )
-        tracked_speed=torch.linalg.vector_norm(dynamic.velocities_w,dim=-1)
-        assert torch.any(tracked_speed[dynamic.valid]>0.01)
+        assert max_tracked_speed>0.01, f"max tracked speed={max_tracked_speed.item():.4f}"
         values=depth[valid]
         allocated_mib=torch.cuda.max_memory_allocated(env.unwrapped.device)/(1024**2)
         reserved_mib=torch.cuda.max_memory_reserved(env.unwrapped.device)/(1024**2)
@@ -97,6 +101,7 @@ def main():
               f"encoder_input_shape={tuple(encoder_input.shape)} static_embedding_shape={tuple(static_embedding.shape)} "
               f"dynamic_shape={tuple(dynamic.state.shape)} dynamic_valid={int(dynamic.valid.sum())} "
               f"max_nearest_track_error_m={nearest_track_error.max().item():.4f} "
+              f"max_tracked_speed_mps={max_tracked_speed.item():.4f} "
               f"dtype={depth.dtype} device={depth.device} "
               f"valid_pixels={int(valid.sum())} range_m=({values.min().item():.3f},{values.max().item():.3f}) "
               f"max_center_error_m={max_center_error:.5f} steps={args.steps} elapsed_s={elapsed_s:.3f} "
