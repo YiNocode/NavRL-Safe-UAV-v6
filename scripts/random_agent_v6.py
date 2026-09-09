@@ -51,7 +51,7 @@ def main():
         )
         assert torch.all(depth[valid]>=cfg.camera_near_m) and torch.all(depth[valid]<=cfg.camera_far_m)
         values=depth[valid]
-        print(f"[PASS] V6 M1 shape={tuple(depth.shape)} dtype={depth.dtype} device={depth.device} "
+        print(f"[PASS] V6 M2 shape={tuple(depth.shape)} dtype={depth.dtype} device={depth.device} "
               f"valid_pixels={int(valid.sum())} range_m=({values.min().item():.3f},{values.max().item():.3f}) "
               f"center_hit_w=({center[0].item():.3f},{center[1].item():.3f},{center[2].item():.3f}) "
               "intrinsics=(1,3,3) pose=(1,3)+(1,4) geometry=validated "
