@@ -98,6 +98,8 @@ def main():
         assert torch.isfinite(encoder_input).all()
         assert static_embedding.shape==(args.num_envs,128)
         assert torch.isfinite(static_embedding).all()
+        assert obs["internal_state"].shape==(args.num_envs,8)
+        assert torch.isfinite(obs["internal_state"]).all()
         dynamic=state["dynamic_observation"]
         assert dynamic.state.shape==(args.num_envs,5,10)
         assert torch.isfinite(dynamic.state).all()
@@ -124,6 +126,7 @@ def main():
         max_center_error=torch.max(torch.abs(centers[:,0]-target_front_x)).item()
         print(f"[PASS] V6 M5 envs={args.num_envs} depth_shape={tuple(depth.shape)} "
               f"encoder_input_shape={tuple(encoder_input.shape)} static_embedding_shape={tuple(static_embedding.shape)} "
+              f"internal_shape={tuple(obs['internal_state'].shape)} "
               f"dynamic_shape={tuple(dynamic.state.shape)} dynamic_valid={int(dynamic.valid.sum())} "
               f"max_nearest_track_error_m={nearest_track_error.max().item():.4f} "
               f"max_tracked_speed_mps={max_tracked_speed.item():.4f} "

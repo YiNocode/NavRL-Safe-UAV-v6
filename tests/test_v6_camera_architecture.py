@@ -45,3 +45,25 @@ def test_v6_m5_dynamic_depth_contract():
     assert "motion_mask" in tracker and "_select_detections" in tracker
     assert "association_distance_m" in tracker and "max_missed_frames" in tracker
     assert "obstacle_positions" not in tracker and "semantic_labels" not in tracker
+
+def test_v6_m6_actor_fusion_contract():
+    cfg=(TASK/"v6_camera_env.py").read_text()
+    actor=(TASK/"agents"/"v6_actor_critic.py").read_text()
+    runner=(TASK/"agents"/"v6_rsl_rl_ppo_cfg.py").read_text()
+    registry=(TASK/"__init__.py").read_text()
+    assert '"internal_state":internal_state_dim' in cfg
+    assert "navrl_internal_state(" in cfg
+    assert "FrontDepthEncoder(" in actor
+    assert "_mlp((self.dynamic_dim, 128, 64))" in actor
+    assert "self.fused_feature_dim = self.static_embedding_dim + 64 + self.internal_state_dim" in actor
+    assert "self.fused_feature_dim != 200" in actor
+    assert "_mlp((self.fused_feature_dim, 256, 256))" in actor
+    assert '["front_depth", "internal_state", "dynamic_obstacles"]' in runner
+    assert 'class_name = "V6NavRLActorCritic"' in runner
+    assert "rsl_rl_cfg_entry_point" in registry and "V6NavRLGpuPPORunnerCfg" in registry
+
+def test_v6_m6_does_not_claim_v5_checkpoint_compatibility():
+    actor=(TASK/"agents"/"v6_actor_critic.py").read_text()
+    assert "StaticObstacleEncoder" not in actor
+    assert "static_obstacles" not in actor
+    assert "front_depth" in actor

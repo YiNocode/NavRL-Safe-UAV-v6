@@ -12,6 +12,7 @@ from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from isaaclab.utils import configclass
 from navrl_uav_v5.assets import DRONE_CFG
 from navrl_uav_v5.utils.gpu_camera_motion_tracker import GpuCameraMotionTracker
+from navrl_uav_v5.utils.navrl_dynamic import navrl_internal_state
 
 @configclass
 class V6FrontDepthCameraEnvCfg(DirectRLEnvCfg):
@@ -21,13 +22,14 @@ class V6FrontDepthCameraEnvCfg(DirectRLEnvCfg):
     camera_near_m=0.10; camera_far_m=5.0
     camera_horizontal_fov_deg=90.0; stereo_baseline_m=0.10
     static_embedding_dim=128
-    dynamic_state_dim=10; max_dynamic_tracks=5
+    internal_state_dim=8; dynamic_state_dim=10; max_dynamic_tracks=5
     motion_threshold_m=0.015; association_distance_m=0.75
     velocity_smoothing=0.70; max_missed_frames=10; motion_nms_kernel=9
     # Policy-side V6 static contract: channel-last axial depth in metres.
     # Invalid/no-return pixels remain non-finite and are masked by the encoder.
     observation_space={
         "front_depth":[camera_height,camera_width,1],
+        "internal_state":internal_state_dim,
         "dynamic_obstacles":[max_dynamic_tracks,dynamic_state_dim],
     }
     sim=SimulationCfg(dt=0.01, render_interval=decimation)
@@ -67,6 +69,8 @@ class V6FrontDepthCameraEnv(DirectRLEnv):
         self._zero_velocity=torch.zeros((self.num_envs,6),device=self.device)
         self._start_to_goal_w=torch.zeros((self.num_envs,3),device=self.device)
         self._start_to_goal_w[:,0]=1.0
+        self._goal_position_w=self.scene.env_origins+torch.tensor(
+            [4.0,0.0,1.0],device=self.device)
         self._motion_tracker=GpuCameraMotionTracker(
             self.num_envs,(cfg.camera_height,cfg.camera_width),cfg.max_dynamic_tracks,
             near_m=cfg.camera_near_m,far_m=cfg.camera_far_m,
@@ -110,8 +114,13 @@ class V6FrontDepthCameraEnv(DirectRLEnv):
         self._dynamic_observation=self._motion_tracker.update(
             depth,data.intrinsic_matrices,data.pos_w,data.quat_w_ros,
             self._drone.data.root_pos_w,self._start_to_goal_w,self.step_dt)
+        internal_state=navrl_internal_state(
+            self._drone.data.root_pos_w,self._goal_position_w,
+            self._drone.data.root_lin_vel_w,self._start_to_goal_w,
+            distance_scale_xy=5.0,distance_scale_z=2.0,velocity_scale=2.0)
         return {
             "front_depth":depth.clone(),
+            "internal_state":internal_state,
             "dynamic_obstacles":self._dynamic_observation.state,
         }
     def _get_rewards(self):

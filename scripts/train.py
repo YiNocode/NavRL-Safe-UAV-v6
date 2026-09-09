@@ -125,13 +125,17 @@ def main() -> None:
         runner.current_learning_iteration += 1
 
     raw = env.unwrapped
-    print(
-        f"[V5] envs={raw.num_envs}, device={raw.device}, "
-        f"voxel_map={raw._perception.map.memory_bytes / 1024**2:.1f} MiB, "
-        "input=depth->GPU voxel/raycast/motion tracks, control=direct velocity, "
-        "ROS2=false, PX4=false, action shield=false",
-        flush=True,
-    )
+    if hasattr(raw,"_perception"):
+        print(
+            f"[V5] envs={raw.num_envs}, device={raw.device}, "
+            f"voxel_map={raw._perception.map.memory_bytes / 1024**2:.1f} MiB, "
+            "input=depth->GPU voxel/raycast/motion tracks, control=direct velocity, "
+            "ROS2=false, PX4=false, action shield=false",flush=True)
+    else:
+        print(
+            f"[V6 M6] envs={raw.num_envs}, device={raw.device}, "
+            "front_depth->128 + dynamic_5x10->64 + internal_8 = fused_200, "
+            "simulator_truth_policy_input=false",flush=True)
     training_finished = False
     try:
         try:

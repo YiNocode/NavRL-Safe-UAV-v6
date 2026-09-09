@@ -21,7 +21,10 @@ if V6_M1_TASK_ID not in gym.registry:
         id=V6_M1_TASK_ID,
         entry_point=f"{__name__}.v6_camera_env:V6FrontDepthCameraEnv",
         disable_env_checker=True,
-        kwargs={"env_cfg_entry_point":f"{__name__}.v6_camera_env:V6FrontDepthCameraEnvCfg"},
+        kwargs={
+            "env_cfg_entry_point":f"{__name__}.v6_camera_env:V6FrontDepthCameraEnvCfg",
+            "rsl_rl_cfg_entry_point":f"{__name__}.agents.v6_rsl_rl_ppo_cfg:V6NavRLGpuPPORunnerCfg",
+        },
     )
 
 __all__ = ["TASK_ID", "V6_M1_TASK_ID"]
