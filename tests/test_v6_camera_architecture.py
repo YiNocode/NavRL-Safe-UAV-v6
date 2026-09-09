@@ -13,3 +13,13 @@ def test_v6_m1_contract():
     geometry=(ROOT/"source"/"navrl_uav_v5"/"navrl_uav_v5"/"utils"/"gpu_camera_geometry.py").read_text()
     assert "backproject_axial_depth" in geometry
     assert "optical_points_to_world" in geometry
+
+def test_v6_m3_batched_contract():
+    cfg=(TASK/"v6_camera_env.py").read_text()
+    smoke=(ROOT/"scripts"/"random_agent_v6.py").read_text()
+    assert "M1 requires exactly one environment" not in cfg
+    assert "(self.num_envs,6)" in cfg
+    assert "(self.num_envs,self.cfg.camera_height,self.cfg.camera_width,1)" in cfg
+    assert "num_envs=args.num_envs" in smoke
+    assert "env_frames_s=" in smoke
+    assert "cuda_peak_allocated_mib=" in smoke

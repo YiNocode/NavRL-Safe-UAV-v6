@@ -1,4 +1,4 @@
-"""V6 M1 single-environment front depth camera task."""
+"""V6 front depth camera task with batched GPU tensors."""
 from __future__ import annotations
 from collections.abc import Sequence
 import torch
@@ -45,10 +45,8 @@ class V6FrontDepthCameraEnvCfg(DirectRLEnvCfg):
 class V6FrontDepthCameraEnv(DirectRLEnv):
     cfg: V6FrontDepthCameraEnvCfg
     def __init__(self,cfg,render_mode=None,**kwargs):
-        if cfg.scene.num_envs != 1:
-            raise ValueError("M1 requires exactly one environment")
         super().__init__(cfg,render_mode,**kwargs)
-        self._zero_velocity=torch.zeros((1,6),device=self.device)
+        self._zero_velocity=torch.zeros((self.num_envs,6),device=self.device)
     def _setup_scene(self):
         self._drone=Articulation(self.cfg.drone)
         self._target=RigidObject(self.cfg.target)
@@ -61,18 +59,19 @@ class V6FrontDepthCameraEnv(DirectRLEnv):
         light=sim_utils.DomeLightCfg(intensity=2000.0)
         light.func("/World/Light",light)
     def _pre_physics_step(self,actions):
-        if actions.shape != (1,3): raise ValueError("actions must have shape (1,3)")
+        if actions.shape != (self.num_envs,3):
+            raise ValueError(f"actions must have shape ({self.num_envs},3)")
     def _apply_action(self):
         self._drone.write_root_velocity_to_sim(self._zero_velocity)
     def _get_observations(self):
         depth=self._camera.data.output["distance_to_image_plane"]
-        expected=(1,self.cfg.camera_height,self.cfg.camera_width,1)
+        expected=(self.num_envs,self.cfg.camera_height,self.cfg.camera_width,1)
         if tuple(depth.shape) != expected: raise RuntimeError(f"unexpected depth shape {tuple(depth.shape)}")
         return {"front_depth":depth.clone()}
     def _get_rewards(self):
-        return torch.zeros(1,device=self.device)
+        return torch.zeros(self.num_envs,device=self.device)
     def _get_dones(self):
-        return torch.zeros(1,dtype=torch.bool,device=self.device), self.episode_length_buf>=self.max_episode_length-1
+        return torch.zeros(self.num_envs,dtype=torch.bool,device=self.device), self.episode_length_buf>=self.max_episode_length-1
     def _reset_idx(self,env_ids:Sequence[int]|None):
         if env_ids is None: env_ids=self._drone._ALL_INDICES
         super()._reset_idx(env_ids)

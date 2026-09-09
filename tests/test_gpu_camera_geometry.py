@@ -28,3 +28,16 @@ def test_geometry_rejects_mismatched_batches():
         pass
     else:
         raise AssertionError("batch mismatch was not rejected")
+
+
+def test_batched_backprojection_keeps_environments_independent():
+    depth=torch.stack((torch.ones((2,3,1)),torch.full((2,3,1),2.0)))
+    k=torch.tensor(
+        [
+            [[2.0,0.0,1.0],[0.0,2.0,1.0],[0.0,0.0,1.0]],
+            [[4.0,0.0,1.0],[0.0,4.0,1.0],[0.0,0.0,1.0]],
+        ]
+    )
+    points=backproject_axial_depth(depth,k)
+    assert points.shape==(2,2,3,3)
+    torch.testing.assert_close(points[:,1,1],torch.tensor([[0.0,0.0,1.0],[0.0,0.0,2.0]]))
