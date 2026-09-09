@@ -31,7 +31,7 @@ def main():
         values=depth[valid]
         print(f"[PASS] V6 M1 shape={tuple(depth.shape)} dtype={depth.dtype} device={depth.device} "
               f"valid_pixels={int(valid.sum())} range_m=({values.min().item():.3f},{values.max().item():.3f}) "
-              "intrinsics=(1,3,3) pose=(1,3)+(1,4) finite_fov_not_v5_360=true")
+              "intrinsics=(1,3,3) pose=(1,3)+(1,4) finite_fov_not_v5_360=true", flush=True)
     finally: env.close()
 if __name__=="__main__":
     try: main()
