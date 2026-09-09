@@ -1,6 +1,7 @@
 """V6 M1-M5 camera geometry, static encoding, and depth tracking smoke."""
 import argparse
 import time
+import traceback
 from isaaclab.app import AppLauncher
 TASK_ID="Isaac-UAV-NavRL-V6-Front-Depth-M1-v0"
 parser=argparse.ArgumentParser()
@@ -105,5 +106,10 @@ def main():
               "track_lifecycle=true simulator_truth_policy_input=false finite_fov_not_v5_360=true", flush=True)
     finally: env.close()
 if __name__=="__main__":
-    try: main()
+    try:
+        main()
+    except BaseException as error:
+        print(f"[FAIL] V6 M5 {type(error).__name__}: {error}",flush=True)
+        traceback.print_exc()
+        raise
     finally: app.close()
