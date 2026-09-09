@@ -19,6 +19,9 @@ class V6FrontDepthCameraEnvCfg(DirectRLEnvCfg):
     camera_height=96; camera_width=160
     camera_near_m=0.10; camera_far_m=5.0
     camera_horizontal_fov_deg=90.0; stereo_baseline_m=0.10
+    static_embedding_dim=128
+    # Policy-side V6 static contract: channel-last axial depth in metres.
+    # Invalid/no-return pixels remain non-finite and are masked by the encoder.
     observation_space={"front_depth":[camera_height,camera_width,1]}
     sim=SimulationCfg(dt=0.01, render_interval=decimation)
     scene=InteractiveSceneCfg(num_envs=1, env_spacing=8.0, replicate_physics=True)

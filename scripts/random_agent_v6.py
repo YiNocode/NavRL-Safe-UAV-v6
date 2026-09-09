@@ -1,4 +1,4 @@
-"""V6 M1-M3 front-depth acquisition, geometry, and batching smoke."""
+"""V6 M1-M4 front-depth acquisition, geometry, batching, and encoder smoke."""
 import argparse
 import time
 from isaaclab.app import AppLauncher
@@ -15,6 +15,7 @@ def main():
     import navrl_uav_v5
     from isaaclab.utils.math import unproject_depth
     from isaaclab_tasks.utils import parse_env_cfg
+    from navrl_uav_v5.tasks.navrl_navigation.agents.front_depth_encoder import FrontDepthEncoder
     from navrl_uav_v5.utils.gpu_camera_geometry import backproject_axial_depth, optical_points_to_world
     if args.num_envs < 1: raise ValueError("--num_envs must be positive")
     cfg=parse_env_cfg(TASK_ID,device=args.device,num_envs=args.num_envs)
@@ -59,13 +60,27 @@ def main():
             f"max center y error={center_y_error.max().item():.4f}"
         )
         assert torch.all(depth[valid]>=cfg.camera_near_m) and torch.all(depth[valid]<=cfg.camera_far_m)
+        static_encoder=FrontDepthEncoder(
+            embedding_dim=cfg.static_embedding_dim,
+            near_m=cfg.camera_near_m,
+            far_m=cfg.camera_far_m,
+        ).to(env.unwrapped.device)
+        with torch.inference_mode():
+            encoder_input=static_encoder.prepare_input(depth)
+            static_embedding=static_encoder(depth)
+        assert encoder_input.shape==(args.num_envs,2,cfg.camera_height,cfg.camera_width)
+        assert torch.isfinite(encoder_input).all()
+        assert static_embedding.shape==(args.num_envs,128)
+        assert torch.isfinite(static_embedding).all()
         values=depth[valid]
         allocated_mib=torch.cuda.max_memory_allocated(env.unwrapped.device)/(1024**2)
         reserved_mib=torch.cuda.max_memory_reserved(env.unwrapped.device)/(1024**2)
         sim_steps_s=args.steps/elapsed_s
         env_frames_s=args.steps*args.num_envs/elapsed_s
         max_center_error=torch.max(torch.abs(centers[:,0]-target_front_x)).item()
-        print(f"[PASS] V6 M3 envs={args.num_envs} shape={tuple(depth.shape)} dtype={depth.dtype} device={depth.device} "
+        print(f"[PASS] V6 M4 envs={args.num_envs} depth_shape={tuple(depth.shape)} "
+              f"encoder_input_shape={tuple(encoder_input.shape)} static_embedding_shape={tuple(static_embedding.shape)} "
+              f"dtype={depth.dtype} device={depth.device} "
               f"valid_pixels={int(valid.sum())} range_m=({values.min().item():.3f},{values.max().item():.3f}) "
               f"max_center_error_m={max_center_error:.5f} steps={args.steps} elapsed_s={elapsed_s:.3f} "
               f"sim_steps_s={sim_steps_s:.2f} env_frames_s={env_frames_s:.2f} "
