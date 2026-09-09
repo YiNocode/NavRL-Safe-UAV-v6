@@ -10,3 +10,6 @@ def test_v6_m1_contract():
     assert 'data_types=["distance_to_image_plane"]' in cfg
     assert '"front_depth":[camera_height,camera_width,1]' in cfg
     assert "MultiMeshRayCaster" not in cfg and "static_obstacles" not in cfg
+    geometry=(ROOT/"source"/"navrl_uav_v5"/"navrl_uav_v5"/"utils"/"gpu_camera_geometry.py").read_text()
+    assert "backproject_axial_depth" in geometry
+    assert "optical_points_to_world" in geometry

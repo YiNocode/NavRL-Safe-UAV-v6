@@ -87,6 +87,8 @@ class V6FrontDepthCameraEnv(DirectRLEnv):
         return {"source":"rtx_tiled_camera_distance_to_image_plane",
             "depth_m":data.output["distance_to_image_plane"].clone(),
             "intrinsics":data.intrinsic_matrices.clone(),"position_w":data.pos_w.clone(),
-            "quaternion_w_world":data.quat_w_world.clone()}
+            "quaternion_w_world":data.quat_w_world.clone(),
+            "quaternion_w_ros":data.quat_w_ros.clone(),
+            "target_position_w":self._target.data.root_pos_w.clone()}
 
 __all__=["V6FrontDepthCameraEnv","V6FrontDepthCameraEnvCfg"]
