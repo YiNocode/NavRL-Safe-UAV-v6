@@ -22,7 +22,7 @@ class V6FrontDepthCameraEnvCfg(DirectRLEnvCfg):
     camera_horizontal_fov_deg=90.0; stereo_baseline_m=0.10
     static_embedding_dim=128
     dynamic_state_dim=10; max_dynamic_tracks=5
-    motion_threshold_m=0.05; association_distance_m=0.75
+    motion_threshold_m=0.015; association_distance_m=0.75
     velocity_smoothing=0.70; max_missed_frames=10; motion_nms_kernel=9
     # Policy-side V6 static contract: channel-last axial depth in metres.
     # Invalid/no-return pixels remain non-finite and are masked by the encoder.
@@ -92,10 +92,11 @@ class V6FrontDepthCameraEnv(DirectRLEnv):
     def _pre_physics_step(self,actions):
         if actions.shape != (self.num_envs,3):
             raise ValueError(f"actions must have shape ({self.num_envs},3)")
-        phase=self.episode_length_buf.to(torch.float32)*self.step_dt*2.0
+        phase=self.episode_length_buf.to(torch.float32)*self.step_dt*4.0
         state=self._dynamic_target.data.default_root_state.clone()
         state[:,:3]+=self.scene.env_origins
-        state[:,1]+=0.20*torch.sin(phase)
+        state[:,0]+=0.35*torch.sin(phase)
+        state[:,1]+=0.15*torch.cos(phase)
         state[:,7:]=0.0
         self._dynamic_target.write_root_pose_to_sim(state[:,:7])
         self._dynamic_target.write_root_velocity_to_sim(state[:,7:])
