@@ -33,6 +33,21 @@ def test_temporal_residual_creates_track_and_preserves_10d_contract():
     assert torch.isfinite(tracked.state).all()
 
 
+def test_no_return_pixels_next_to_motion_never_create_nonfinite_tracks():
+    tracker=GpuCameraMotionTracker(
+        1,(3,3),max_tracks=2,motion_threshold_m=0.05,
+        association_distance_m=1.0,velocity_smoothing=0.5,
+        max_missed_frames=1,nms_kernel=3,device="cpu")
+    intrinsics,position,quaternion,goal_frame=_camera_inputs(1,3,3)
+    first=torch.full((1,3,3,1),4.0); first[:,0,:,0]=torch.inf
+    tracker.update(first,intrinsics,position,quaternion,position,goal_frame,0.1)
+    second=first.clone(); second[:,1,1,0]=2.0
+    result=tracker.update(second,intrinsics,position,quaternion,position,goal_frame,0.1)
+    assert result.valid.any()
+    assert torch.isfinite(result.positions_w).all()
+    assert torch.isfinite(result.state).all()
+
+
 def test_ego_translation_is_compensated_before_residual():
     tracker=GpuCameraMotionTracker(
         1,(1,1),max_tracks=1,motion_threshold_m=0.01,

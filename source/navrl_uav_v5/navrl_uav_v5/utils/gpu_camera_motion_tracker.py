@@ -217,7 +217,8 @@ class GpuCameraMotionTracker:
         motion_mask = functional.max_pool2d(
             motion_mask[:, None].float(), 3, stride=1, padding=1
         ).squeeze(1).bool()
-        score_image = torch.where(motion_mask, residual, torch.zeros_like(residual)).flatten(1)
+        candidate_mask = motion_mask & current_valid & torch.isfinite(residual)
+        score_image = torch.where(candidate_mask, residual, torch.zeros_like(residual)).flatten(1)
         selected_index, selected_score = self._select_detections(score_image)
         detected = selected_score > 0.0
 
