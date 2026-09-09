@@ -2,7 +2,7 @@
 
 > 文档状态：与当前 V5 代码、配置和实验产物一致  
 > 编写日期：2026-09-01  
-> 项目根目录：`/home/tianxuli/Desktop/NavRL-Safe-UAV-v5`  
+> 项目根目录：`/home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5`
 > Isaac Lab 任务 ID：`Isaac-UAV-NavRL-V5-GPU-Direct-v0`
 
 ## 目录
@@ -247,7 +247,7 @@ NavRL-Safe-UAV-v5/
 - Isaac Sim、Isaac Lab、PyTorch、CUDA 和 RSL-RL 使用已验证的 `isaaclab` Conda 环境；
 - 项目自身以 editable、`--no-deps` 模式安装；
 - 不让上游 Python 元数据重新安装或替换 Isaac Sim 已验证的 PyTorch/CUDA 组合；
-- 文档中的依赖版本来自 `environment_info.txt`。该文件标题和旧安装路径沿用了早期版本名称，应把内容视为机器工具链快照，而不是 V5 包名定义。
+- 文档中的依赖版本以 `environment_reproduced_20260908.txt` 为准；`environment_info.txt` 仅保留为早期机器工具链快照。
 
 ---
 
@@ -975,7 +975,7 @@ cd45da49d613f05dcef73a3ed16ea643a27995d34c9460b9796fc33579aa6949
 
 ## 17. 独立森林泛化测试
 
-另有独立工程 `/home/tianxuli/Desktop/NavRL-Safe-UAV-v5-forest-eval`，使用同一个冻结 checkpoint 对程序化几何森林进行零样本评估。该测试不更新权重，不属于 V5 原训练分布。
+历史上曾使用独立 forest-eval 工程和同一个冻结 checkpoint 对程序化几何森林进行零样本评估。该工程不在当前服务器工作区中；该测试不更新权重，也不属于 V5 原训练分布。
 
 森林模板池包含 96 个真实 kinematic PhysX collider：
 
@@ -1057,8 +1057,8 @@ RTX 4070 12 GiB 上、不含 PPO 更新的实测：
 执行：
 
 ```bash
-cd /home/tianxuli/Desktop/NavRL-Safe-UAV-v5
-/home/tianxuli/.conda/envs/isaaclab/bin/python -m pytest -q tests
+cd /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5
+/home/ubuntu/miniforge3/envs/isaaclab-v5/bin/python -m pytest -q tests
 ```
 
 当前结果：
@@ -1110,42 +1110,42 @@ cd /home/tianxuli/Desktop/NavRL-Safe-UAV-v5
 
 ## 20. 安装、训练、评估和可视化
 
-以下命令假定 Isaac Lab 位于 `/home/tianxuli/Desktop/IsaacLab`。
+以下命令假定 Isaac Lab 位于 `/home/ubuntu/Desktop/IsaacLab`。
 
 ### 20.1 安装 V5 扩展
 
 ```bash
-cd /home/tianxuli/Desktop/IsaacLab
-./isaaclab.sh -i /home/tianxuli/Desktop/NavRL-Safe-UAV-v5/source/navrl_uav_v5
+cd /home/ubuntu/Desktop/IsaacLab
+./isaaclab.sh -i /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5/source/navrl_uav_v5
 ```
 
 若上游元数据会替换已验证的 CUDA/PyTorch 版本，使用：
 
 ```bash
-/home/tianxuli/.conda/envs/isaaclab/bin/python -m pip install --no-deps -e \
-  /home/tianxuli/Desktop/NavRL-Safe-UAV-v5/source/navrl_uav_v5
+/home/ubuntu/miniforge3/envs/isaaclab-v5/bin/python -m pip install --no-deps -e \
+  /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5/source/navrl_uav_v5
 ```
 
 ### 20.2 单元测试
 
 ```bash
-cd /home/tianxuli/Desktop/NavRL-Safe-UAV-v5
-/home/tianxuli/.conda/envs/isaaclab/bin/python -m pytest -q tests
+cd /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5
+/home/ubuntu/miniforge3/envs/isaaclab-v5/bin/python -m pytest -q tests
 ```
 
 ### 20.3 有限环境 rollout
 
 ```bash
-cd /home/tianxuli/Desktop/IsaacLab
-./isaaclab.sh -p /home/tianxuli/Desktop/NavRL-Safe-UAV-v5/scripts/random_agent.py \
+cd /home/ubuntu/Desktop/IsaacLab
+./isaaclab.sh -p /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5/scripts/random_agent.py \
   --headless --device cuda:0 --num_envs 32 --steps 50
 ```
 
 ### 20.4 训练
 
 ```bash
-cd /home/tianxuli/Desktop/IsaacLab
-./isaaclab.sh -p /home/tianxuli/Desktop/NavRL-Safe-UAV-v5/scripts/train.py \
+cd /home/ubuntu/Desktop/IsaacLab
+./isaaclab.sh -p /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5/scripts/train.py \
   --headless --device cuda:0 --num_envs 4096 \
   --max_iterations 10000 --run_name v5_sensor_only
 ```
@@ -1153,7 +1153,7 @@ cd /home/tianxuli/Desktop/IsaacLab
 W&B：
 
 ```bash
-./isaaclab.sh -p /home/tianxuli/Desktop/NavRL-Safe-UAV-v5/scripts/train.py \
+./isaaclab.sh -p /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5/scripts/train.py \
   --headless --device cuda:0 --num_envs 4096 \
   --max_iterations 10000 --logger wandb \
   --wandb_project navrl-safe-uav-v5 --run_name v5_wandb
@@ -1162,7 +1162,7 @@ W&B：
 ### 20.5 从 checkpoint 恢复
 
 ```bash
-./isaaclab.sh -p /home/tianxuli/Desktop/NavRL-Safe-UAV-v5/scripts/train.py \
+./isaaclab.sh -p /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5/scripts/train.py \
   --headless --device cuda:0 --num_envs 4096 \
   --resume /absolute/path/model_best.pt \
   --learning_rate 1e-5 --reset_optimizer_on_resume \
@@ -1179,7 +1179,7 @@ W&B：
 ### 20.6 确定性评估
 
 ```bash
-./isaaclab.sh -p /home/tianxuli/Desktop/NavRL-Safe-UAV-v5/scripts/evaluate.py \
+./isaaclab.sh -p /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5/scripts/evaluate.py \
   --headless --device cuda:0 \
   --checkpoint /absolute/path/model_best.pt \
   --num_envs 64 --episodes 500 --seed 1001 \
@@ -1191,9 +1191,9 @@ W&B：
 ### 20.7 全局第三方视角循环播放
 
 ```bash
-cd /home/tianxuli/Desktop/IsaacLab
+cd /home/ubuntu/Desktop/IsaacLab
 DISPLAY=:1 XAUTHORITY=/run/user/1000/gdm/Xauthority \
-./isaaclab.sh -p /home/tianxuli/Desktop/NavRL-Safe-UAV-v5/scripts/play.py \
+./isaaclab.sh -p /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5/scripts/play.py \
   --device cuda:0 --checkpoint /absolute/path/model_best.pt \
   --num_envs 1 --single-episode --loop-episodes \
   --third-person-viewport --real-time --playback-speed 1.0 \
@@ -1211,7 +1211,7 @@ DISPLAY=:1 XAUTHORITY=/run/user/1000/gdm/Xauthority \
 ### 20.8 GPU benchmark
 
 ```bash
-./isaaclab.sh -p /home/tianxuli/Desktop/NavRL-Safe-UAV-v5/scripts/benchmark_scaling.py \
+./isaaclab.sh -p /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5/scripts/benchmark_scaling.py \
   --headless --device cuda:0 --num_envs 1024 \
   --warmup_steps 20 --benchmark_steps 100
 ```
@@ -1347,14 +1347,14 @@ deadlock recovery action override
 处理：
 
 ```bash
-/home/tianxuli/.conda/envs/isaaclab/bin/python -m pip install --no-deps -e \
-  /home/tianxuli/Desktop/NavRL-Safe-UAV-v5/source/navrl_uav_v5
+/home/ubuntu/miniforge3/envs/isaaclab-v5/bin/python -m pip install --no-deps -e \
+  /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5/source/navrl_uav_v5
 ```
 
 不要在已验证环境中重新安装 torch/CUDA。先确认：
 
 ```bash
-/home/tianxuli/.conda/envs/isaaclab/bin/python -c \
+/home/ubuntu/miniforge3/envs/isaaclab-v5/bin/python -c \
   "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
 ```
 
