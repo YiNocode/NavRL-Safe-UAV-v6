@@ -1,4 +1,4 @@
-"""V6 M1-M5 camera geometry, static encoding, and depth tracking smoke."""
+"""V6 M1-M6 camera perception and structured-observation smoke."""
 import argparse
 import time
 import traceback
@@ -124,7 +124,7 @@ def main():
         sim_steps_s=args.steps/elapsed_s
         env_frames_s=args.steps*args.num_envs/elapsed_s
         max_center_error=torch.max(torch.abs(centers[:,0]-target_front_x)).item()
-        print(f"[PASS] V6 M5 envs={args.num_envs} depth_shape={tuple(depth.shape)} "
+        print(f"[PASS] V6 M6 envs={args.num_envs} depth_shape={tuple(depth.shape)} "
               f"encoder_input_shape={tuple(encoder_input.shape)} static_embedding_shape={tuple(static_embedding.shape)} "
               f"internal_shape={tuple(obs['internal_state'].shape)} "
               f"dynamic_shape={tuple(dynamic.state.shape)} dynamic_valid={int(dynamic.valid.sum())} "
@@ -142,7 +142,7 @@ if __name__=="__main__":
     try:
         main()
     except BaseException as error:
-        print(f"[FAIL] V6 M5 {type(error).__name__}: {error}",flush=True)
+        print(f"[FAIL] V6 M6 {type(error).__name__}: {error}",flush=True)
         traceback.print_exc()
         raise
     finally: app.close()
