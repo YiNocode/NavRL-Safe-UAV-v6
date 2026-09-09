@@ -218,7 +218,10 @@ class GpuCameraMotionTracker:
             motion_mask[:, None].float(), 3, stride=1, padding=1
         ).squeeze(1).bool()
         candidate_mask = motion_mask & current_valid & torch.isfinite(residual)
-        score_image = torch.where(candidate_mask, residual, torch.zeros_like(residual)).flatten(1)
+        foreground_weight = (1.0 - current_depth / self.far_m).clamp_min(0.05)
+        score_image = torch.where(
+            candidate_mask, residual * foreground_weight, torch.zeros_like(residual)
+        ).flatten(1)
         selected_index, selected_score = self._select_detections(score_image)
         detected = selected_score > 0.0
 
@@ -254,13 +257,18 @@ class GpuCameraMotionTracker:
             distances = torch.where(available, distances, torch.full_like(distances, torch.inf))
             nearest_distance, nearest_slot = distances.min(dim=1)
             matched = detected[:, detection_index] & (nearest_distance <= self.association_distance_m)
-            free = ~old_valid
+            free = ~old_valid & ~claimed
             free_slot = free.to(torch.int64).argmax(dim=1)
             has_free = free.any(dim=1)
-            replacement_slot = new_missed.argmax(dim=1)
+            replaceable = ~claimed
+            replacement_score = torch.where(
+                replaceable, new_missed, torch.full_like(new_missed, -1)
+            )
+            replacement_slot = replacement_score.argmax(dim=1)
+            has_replacement = replaceable.any(dim=1)
             new_slot = torch.where(has_free, free_slot, replacement_slot)
             slot = torch.where(matched, nearest_slot, new_slot)
-            active = detected[:, detection_index]
+            active = detected[:, detection_index] & (matched | has_free | has_replacement)
             active_env = env_ids[active]
             active_slot = slot[active]
             if active_env.numel() == 0:

@@ -31,6 +31,10 @@ def test_temporal_residual_creates_track_and_preserves_10d_contract():
     assert tracked.state.shape==(2,5,10)
     assert tracked.valid[:,0].all() and tracked.motion_mask[:,2,2].all()
     assert torch.isfinite(tracked.state).all()
+    third=first.clone(); third[:,2,3,0]=2.0
+    moving_track=tracker.update(third,intrinsics,position,quaternion,position,goal_frame,0.1)
+    speed=torch.linalg.vector_norm(moving_track.velocities_w,dim=-1)
+    assert torch.any(speed[moving_track.valid]>0.01)
 
 
 def test_no_return_pixels_next_to_motion_never_create_nonfinite_tracks():
