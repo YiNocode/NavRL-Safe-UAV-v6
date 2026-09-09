@@ -23,7 +23,7 @@ class V6FrontDepthCameraEnvCfg(DirectRLEnvCfg):
     static_embedding_dim=128
     dynamic_state_dim=10; max_dynamic_tracks=5
     motion_threshold_m=0.05; association_distance_m=0.75
-    velocity_smoothing=0.70; max_missed_frames=3; motion_nms_kernel=9
+    velocity_smoothing=0.70; max_missed_frames=10; motion_nms_kernel=9
     # Policy-side V6 static contract: channel-last axial depth in metres.
     # Invalid/no-return pixels remain non-finite and are masked by the encoder.
     observation_space={
