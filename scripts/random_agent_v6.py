@@ -28,8 +28,12 @@ def main():
         start=time.perf_counter()
         max_tracked_speed=torch.zeros((),device=env.unwrapped.device)
         total_track_matches=0
+        total_detections=0
+        detection_frames=0
         min_association_distance=float("inf")
         max_measured_speed=0.0
+        previous_truth_position=None
+        max_truth_step=torch.zeros((),device=env.unwrapped.device)
         for _ in range(args.steps):
             obs,*_=env.step(torch.zeros((args.num_envs,3),device=env.unwrapped.device))
             tracked=env.unwrapped._dynamic_observation
@@ -38,10 +42,17 @@ def main():
                 max_tracked_speed=torch.maximum(max_tracked_speed,speed[tracked.valid].max())
             tracker=env.unwrapped._motion_tracker
             total_track_matches+=tracker.last_matched_count
+            total_detections+=tracker.last_detection_count
+            detection_frames+=int(tracker.last_detection_count>0)
             min_association_distance=min(
                 min_association_distance,tracker.last_min_association_distance
             )
             max_measured_speed=max(max_measured_speed,tracker.last_max_measured_speed)
+            truth_position=env.unwrapped._dynamic_target.data.root_pos_w.clone()
+            if previous_truth_position is not None:
+                truth_step=torch.linalg.vector_norm(truth_position-previous_truth_position,dim=-1).max()
+                max_truth_step=torch.maximum(max_truth_step,truth_step)
+            previous_truth_position=truth_position
         torch.cuda.synchronize(env.unwrapped.device)
         elapsed_s=time.perf_counter()-start
         state=env.unwrapped.get_camera_state(); depth=state["depth_m"]
@@ -101,7 +112,9 @@ def main():
         )
         assert max_tracked_speed>0.01, (
             f"max tracked speed={max_tracked_speed.item():.4f}, matches={total_track_matches}, "
-            f"min association={min_association_distance:.4f}, max measured speed={max_measured_speed:.4f}"
+            f"detections={total_detections}/{detection_frames} frames, "
+            f"min association={min_association_distance:.4f}, max measured speed={max_measured_speed:.4f}, "
+            f"max truth step={max_truth_step.item():.4f}"
         )
         values=depth[valid]
         allocated_mib=torch.cuda.max_memory_allocated(env.unwrapped.device)/(1024**2)
