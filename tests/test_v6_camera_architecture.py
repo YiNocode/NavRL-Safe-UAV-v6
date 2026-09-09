@@ -27,10 +27,21 @@ def test_v6_m3_batched_contract():
 def test_v6_m4_finite_fov_static_contract():
     cfg=(TASK/"v6_camera_env.py").read_text()
     encoder=(TASK/"agents"/"front_depth_encoder.py").read_text()
-    assert 'observation_space={"front_depth":[camera_height,camera_width,1]}' in cfg
+    assert '"front_depth":[camera_height,camera_width,1]' in cfg
     assert "static_embedding_dim=128" in cfg
     assert "torch.isfinite(depth)" in encoder
     assert "torch.stack((proximity, valid.to(depth.dtype)), dim=1)" in encoder
     assert "nn.Conv2d(2, 16" in encoder
     assert "[B,128]" in encoder
     assert "36,7" not in encoder and "StaticObstacleEncoder" not in encoder
+
+def test_v6_m5_dynamic_depth_contract():
+    cfg=(TASK/"v6_camera_env.py").read_text()
+    tracker=(ROOT/"source"/"navrl_uav_v5"/"navrl_uav_v5"/"utils"/"gpu_camera_motion_tracker.py").read_text()
+    assert '"dynamic_obstacles":[max_dynamic_tracks,dynamic_state_dim]' in cfg
+    assert "max_dynamic_tracks=5" in cfg and "dynamic_state_dim=10" in cfg
+    assert "_previous_depth_in_current_camera" in tracker
+    assert "scatter_reduce_" in tracker
+    assert "motion_mask" in tracker and "_select_detections" in tracker
+    assert "association_distance_m" in tracker and "max_missed_frames" in tracker
+    assert "obstacle_positions" not in tracker and "semantic_labels" not in tracker

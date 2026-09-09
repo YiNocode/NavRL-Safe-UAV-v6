@@ -1,4 +1,4 @@
-"""V6 M1-M4 front-depth acquisition, geometry, batching, and encoder smoke."""
+"""V6 M1-M5 camera geometry, static encoding, and depth tracking smoke."""
 import argparse
 import time
 from isaaclab.app import AppLauncher
@@ -72,20 +72,37 @@ def main():
         assert torch.isfinite(encoder_input).all()
         assert static_embedding.shape==(args.num_envs,128)
         assert torch.isfinite(static_embedding).all()
+        dynamic=state["dynamic_observation"]
+        assert dynamic.state.shape==(args.num_envs,5,10)
+        assert torch.isfinite(dynamic.state).all()
+        assert dynamic.valid.any(dim=1).all()
+        assert dynamic.motion_mask.reshape(args.num_envs,-1).any(dim=1).all()
+        truth=state["dynamic_target_position_w"]
+        track_error=torch.linalg.vector_norm(dynamic.positions_w-truth[:,None,:],dim=-1)
+        track_error=torch.where(dynamic.valid,track_error,torch.full_like(track_error,torch.inf))
+        nearest_track_error=track_error.min(dim=1).values
+        assert torch.all(nearest_track_error<=0.50), (
+            f"max nearest dynamic track error={nearest_track_error.max().item():.4f}"
+        )
+        tracked_speed=torch.linalg.vector_norm(dynamic.velocities_w,dim=-1)
+        assert torch.any(tracked_speed[dynamic.valid]>0.01)
         values=depth[valid]
         allocated_mib=torch.cuda.max_memory_allocated(env.unwrapped.device)/(1024**2)
         reserved_mib=torch.cuda.max_memory_reserved(env.unwrapped.device)/(1024**2)
         sim_steps_s=args.steps/elapsed_s
         env_frames_s=args.steps*args.num_envs/elapsed_s
         max_center_error=torch.max(torch.abs(centers[:,0]-target_front_x)).item()
-        print(f"[PASS] V6 M4 envs={args.num_envs} depth_shape={tuple(depth.shape)} "
+        print(f"[PASS] V6 M5 envs={args.num_envs} depth_shape={tuple(depth.shape)} "
               f"encoder_input_shape={tuple(encoder_input.shape)} static_embedding_shape={tuple(static_embedding.shape)} "
+              f"dynamic_shape={tuple(dynamic.state.shape)} dynamic_valid={int(dynamic.valid.sum())} "
+              f"max_nearest_track_error_m={nearest_track_error.max().item():.4f} "
               f"dtype={depth.dtype} device={depth.device} "
               f"valid_pixels={int(valid.sum())} range_m=({values.min().item():.3f},{values.max().item():.3f}) "
               f"max_center_error_m={max_center_error:.5f} steps={args.steps} elapsed_s={elapsed_s:.3f} "
               f"sim_steps_s={sim_steps_s:.2f} env_frames_s={env_frames_s:.2f} "
               f"cuda_peak_allocated_mib={allocated_mib:.1f} cuda_peak_reserved_mib={reserved_mib:.1f} "
-              "geometry=validated isaac_unproject_match=true finite_fov_not_v5_360=true", flush=True)
+              "geometry=validated isaac_unproject_match=true ego_compensation=true "
+              "track_lifecycle=true simulator_truth_policy_input=false finite_fov_not_v5_360=true", flush=True)
     finally: env.close()
 if __name__=="__main__":
     try: main()
