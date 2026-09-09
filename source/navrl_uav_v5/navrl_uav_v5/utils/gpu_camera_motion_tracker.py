@@ -87,6 +87,9 @@ class GpuCameraMotionTracker:
         self.sizes = torch.zeros_like(self.positions_w)
         self.valid = torch.zeros((num_envs, max_tracks), dtype=torch.bool, device=self.device)
         self.missed_frames = torch.zeros((num_envs, max_tracks), dtype=torch.int64, device=self.device)
+        self.last_matched_count = 0
+        self.last_max_measured_speed = 0.0
+        self.last_min_association_distance = torch.inf
 
     def reset(self, env_ids: torch.Tensor | None = None) -> None:
         ids = (
@@ -249,6 +252,9 @@ class GpuCameraMotionTracker:
         observed = torch.zeros_like(old_valid)
         claimed = torch.zeros_like(old_valid)
         env_ids = torch.arange(self.num_envs, device=self.device)
+        matched_count = 0
+        max_measured_speed = torch.zeros((), device=self.device)
+        min_association_distance = torch.full((), torch.inf, device=self.device)
 
         for detection_index in range(self.max_tracks):
             candidate = candidates[:, detection_index]
@@ -257,6 +263,11 @@ class GpuCameraMotionTracker:
             distances = torch.where(available, distances, torch.full_like(distances, torch.inf))
             nearest_distance, nearest_slot = distances.min(dim=1)
             matched = detected[:, detection_index] & (nearest_distance <= self.association_distance_m)
+            if detected[:, detection_index].any():
+                min_association_distance = torch.minimum(
+                    min_association_distance, nearest_distance[detected[:, detection_index]].min()
+                )
+            matched_count += int(matched.sum().item())
             free = ~old_valid & ~claimed
             free_slot = free.to(torch.int64).argmax(dim=1)
             has_free = free.any(dim=1)
@@ -276,6 +287,9 @@ class GpuCameraMotionTracker:
             previous = old_positions[active_env, active_slot]
             measured_velocity = ((candidate[active] - previous) / dt).clamp(-5.0, 5.0)
             was_matched = matched[active].unsqueeze(-1)
+            if was_matched.any():
+                measured_speed = torch.linalg.vector_norm(measured_velocity[was_matched[:, 0]], dim=-1)
+                max_measured_speed = torch.maximum(max_measured_speed, measured_speed.max())
             filtered_velocity = self.velocity_smoothing * new_velocities[active_env, active_slot]
             filtered_velocity += (1.0 - self.velocity_smoothing) * measured_velocity
             new_positions[active_env, active_slot] = candidate[active]
@@ -298,6 +312,9 @@ class GpuCameraMotionTracker:
         self.previous_position_w.copy_(position_w)
         self.previous_quaternion_w_ros.copy_(quaternion_w_ros)
         self.has_previous_frame.fill_(True)
+        self.last_matched_count = matched_count
+        self.last_max_measured_speed = float(max_measured_speed.item())
+        self.last_min_association_distance = float(min_association_distance.item())
         return CameraDynamicObservation(
             state=self._encode(robot_position_w, start_to_goal_w),
             positions_w=self.positions_w.clone(),

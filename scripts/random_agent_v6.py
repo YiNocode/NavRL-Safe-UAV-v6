@@ -27,12 +27,21 @@ def main():
         torch.cuda.synchronize(env.unwrapped.device)
         start=time.perf_counter()
         max_tracked_speed=torch.zeros((),device=env.unwrapped.device)
+        total_track_matches=0
+        min_association_distance=float("inf")
+        max_measured_speed=0.0
         for _ in range(args.steps):
             obs,*_=env.step(torch.zeros((args.num_envs,3),device=env.unwrapped.device))
             tracked=env.unwrapped._dynamic_observation
             if tracked is not None and tracked.valid.any():
                 speed=torch.linalg.vector_norm(tracked.velocities_w,dim=-1)
                 max_tracked_speed=torch.maximum(max_tracked_speed,speed[tracked.valid].max())
+            tracker=env.unwrapped._motion_tracker
+            total_track_matches+=tracker.last_matched_count
+            min_association_distance=min(
+                min_association_distance,tracker.last_min_association_distance
+            )
+            max_measured_speed=max(max_measured_speed,tracker.last_max_measured_speed)
         torch.cuda.synchronize(env.unwrapped.device)
         elapsed_s=time.perf_counter()-start
         state=env.unwrapped.get_camera_state(); depth=state["depth_m"]
@@ -90,7 +99,10 @@ def main():
         assert torch.all(nearest_track_error<=0.50), (
             f"max nearest dynamic track error={nearest_track_error.max().item():.4f}"
         )
-        assert max_tracked_speed>0.01, f"max tracked speed={max_tracked_speed.item():.4f}"
+        assert max_tracked_speed>0.01, (
+            f"max tracked speed={max_tracked_speed.item():.4f}, matches={total_track_matches}, "
+            f"min association={min_association_distance:.4f}, max measured speed={max_measured_speed:.4f}"
+        )
         values=depth[valid]
         allocated_mib=torch.cuda.max_memory_allocated(env.unwrapped.device)/(1024**2)
         reserved_mib=torch.cuda.max_memory_reserved(env.unwrapped.device)/(1024**2)
