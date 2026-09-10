@@ -133,7 +133,7 @@ def main() -> None:
             "ROS2=false, PX4=false, action shield=false",flush=True)
     else:
         print(
-            f"[V6 M6] envs={raw.num_envs}, device={raw.device}, "
+            f"[V6] envs={raw.num_envs}, device={raw.device}, "
             "front_depth->128 + dynamic_5x10->64 + internal_8 = fused_200, "
             "simulator_truth_policy_input=false",flush=True)
     training_finished = False

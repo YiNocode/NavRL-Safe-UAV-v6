@@ -1,6 +1,7 @@
 # NavRL-Safe-UAV V6 正式训练技术基线
 
 文档日期：2026-09-10  
+实现提交：`996e16a`
 目标分支：`v6-stereo-depth`  
 服务器仓库：`/home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5`  
 Isaac Lab：`/home/ubuntu/Desktop/IsaacLab`（v2.3.2，commit `37ddf62`）
@@ -43,6 +44,8 @@ V6 采用 `V6FrontDepthCameraEnv(NavRLGpuEnv)`：保留 V5 已验证的直接速
 | RSL-RL | 3.1.2 |
 | device | `cuda:0` |
 | logger | TensorBoard |
+| server GPU | 2× NVIDIA GeForce RTX 4090；本次 Isaac active device 为 GPU 1 |
+| active device memory | 48,508 MiB（PyTorch 报告值） |
 
 依赖记录为 `environment_reproduced_20260908.txt`。编辑端不进入配置或运行路径；实验只使用上方服务器路径。
 
@@ -233,6 +236,8 @@ M7 使用 96×160、单 render product、warm-up 20、benchmark 100、profile 10
 
 所有规模无 OOM，稳定段显存无持续增长。拐点从 64→128 开始，256 边际收益进一步减弱。该表是 clean camera workload；正式随机场景接入后必须重新测 64/128，首个正式训练默认 64。
 
+完整随机导航场景的 64-env 复测结果：environment/camera FPS 1026.79，policy steps/s 16.04，device used 3302.94 MiB，Torch peak allocated/reserved 191.85/294 MiB；second-half allocated/reserved/device-used growth 均为 0，`memory_stable=true`、`oom=false`。step latency 为 pre-physics 2.034 ms、apply 0.264 ms、observation 5.892 ms、physics/render residual 48.097 ms、total 56.287 ms。正式 workload 的主要瓶颈已经转为 physics/render wrapper。
+
 ## 12. Gate 清单
 
 ### 12.1 已实现并纳入自动 gate
@@ -252,24 +257,33 @@ M7 使用 96×160、单 render product、warm-up 20、benchmark 100、profile 10
 
 ```bash
 cd /home/ubuntu/Desktop/NavRL-Safe-UAV-v5/NavRL-Safe-UAV-v5
-pytest -q
+/home/ubuntu/miniforge3/envs/isaaclab-v5/bin/python -m pytest -q -p no:cacheprovider
 
-/home/ubuntu/Desktop/IsaacLab/isaaclab.sh -p scripts/validate_v6_formal_gates.py \
-  --num_envs 8 --motion_steps 8 --headless
+/home/ubuntu/miniforge3/envs/isaaclab-v5/bin/python scripts/validate_v6_formal_gates.py \
+  --num_envs 8 --motion_steps 8 --headless --enable_cameras
 
-/home/ubuntu/Desktop/IsaacLab/isaaclab.sh -p scripts/train.py \
+/home/ubuntu/miniforge3/envs/isaaclab-v5/bin/python scripts/train.py \
   --task Isaac-UAV-NavRL-V6-Front-Depth-M1-v0 \
-  --num_envs 32 --max_iterations 1 --headless
+  --num_envs 32 --max_iterations 1 --headless --enable_cameras
 
-/home/ubuntu/Desktop/IsaacLab/isaaclab.sh -p scripts/benchmark_scaling.py \
+/home/ubuntu/miniforge3/envs/isaaclab-v5/bin/python scripts/benchmark_scaling.py \
   --task Isaac-UAV-NavRL-V6-Front-Depth-M1-v0 \
   --num_envs 64 --warmup_steps 20 --benchmark_steps 100 \
-  --profile_steps 10 --camera_read_repetitions 50 --headless
+  --profile_steps 10 --camera_read_repetitions 50 --headless --enable_cameras
 
 git status --short
 ```
 
 PASS 要求：31+ tests；runtime gate 报告 action/reward/四类 termination/randomization/metrics/truth-leak 全通过；PPO 完成一次 update 且 checkpoint finite；64-env 完整场景无 OOM/持续显存增长；Git 状态为空。
+
+### 12.3 2026-09-10 服务器验收结果
+
+- pytest：31 passed；
+- 8-env runtime：depth `[8,96,160,1]`，minimum commanded displacement 0.3200 m，action/reward/success/collision/out-of-bounds/timeout/contact/randomization/metrics/truth-leak 全 PASS；
+- 32-env PPO：one iteration 完成，`model_final.pt` 中 37/37 tensors finite；
+- checkpoint：`logs/rsl_rl/uav_v6_front_depth/2026-09-10_15-34-10_formal_camera_navigation/model_final.pt`；
+- 64-env full-scene scaling：PASS，1026.79 env FPS，无 OOM，无持续显存增长；
+- Isaac 启动日志存在非必需 `omni.kit.test` 扩展的 `CXXABI_1.3.15` 错误噪声，但 rendering experience、环境、runtime gate、PPO 和 benchmark 均正常完成。该环境问题应独立维护，不应误报为训练 gate 失败。
 
 ## 13. 实验记录与尚未扩展项
 
