@@ -73,6 +73,8 @@ def test_v6_m7_scaling_benchmark_contract():
     assert "default=V6_TASK_ID" in benchmark
     assert '"environment_fps"' in benchmark and '"camera_fps"' in benchmark
     assert '"gpu_memory_mib"' in benchmark and '"memory_stable"' in benchmark
+    assert "torch.cuda.mem_get_info" in benchmark
+    assert '"device_used"' in benchmark
     assert '"step_latency_ms"' in benchmark
     assert '"policy_inference_ms"' in benchmark
     assert '"pre_physics"' in benchmark

@@ -49,10 +49,17 @@ def main() -> None:
 
     def memory_mib() -> dict[str, float]:
         if not torch.cuda.is_available() or torch.device(device).type != "cuda":
-            return {"allocated": 0.0, "reserved": 0.0}
+            return {
+                "allocated": 0.0, "reserved": 0.0, "device_used": 0.0,
+                "device_free": 0.0, "device_total": 0.0,
+            }
+        free_bytes, total_bytes = torch.cuda.mem_get_info(device)
         return {
             "allocated": torch.cuda.memory_allocated(device) / 1024**2,
             "reserved": torch.cuda.memory_reserved(device) / 1024**2,
+            "device_used": (total_bytes - free_bytes) / 1024**2,
+            "device_free": free_bytes / 1024**2,
+            "device_total": total_bytes / 1024**2,
         }
 
     try:
@@ -166,8 +173,14 @@ def main() -> None:
 
         reserved_growth = end_memory["reserved"] - midpoint_memory["reserved"]
         allocated_growth = end_memory["allocated"] - midpoint_memory["allocated"]
+        device_growth = end_memory["device_used"] - midpoint_memory["device_used"]
         growth_allowance = max(16.0, 0.05 * max(midpoint_memory["reserved"], 1.0))
-        memory_stable = reserved_growth <= growth_allowance and allocated_growth <= growth_allowance
+        device_growth_allowance = max(64.0, 0.05 * max(midpoint_memory["device_used"], 1.0))
+        memory_stable = (
+            reserved_growth <= growth_allowance
+            and allocated_growth <= growth_allowance
+            and device_growth <= device_growth_allowance
+        )
         environment_fps = args_cli.num_envs * args_cli.benchmark_steps / elapsed
         result = {
             "task": args_cli.task,
@@ -204,6 +217,7 @@ def main() -> None:
                 ),
                 "second_half_allocated_growth": allocated_growth,
                 "second_half_reserved_growth": reserved_growth,
+                "second_half_device_used_growth": device_growth,
             },
             "memory_stable": memory_stable,
             "oom": False,
