@@ -67,3 +67,16 @@ def test_v6_m6_does_not_claim_v5_checkpoint_compatibility():
     assert "StaticObstacleEncoder" not in actor
     assert "static_obstacles" not in actor
     assert "front_depth" in actor
+
+def test_v6_m7_scaling_benchmark_contract():
+    benchmark=(ROOT/"scripts"/"benchmark_scaling.py").read_text()
+    assert "default=V6_TASK_ID" in benchmark
+    assert '"environment_fps"' in benchmark and '"camera_fps"' in benchmark
+    assert '"gpu_memory_mib"' in benchmark and '"memory_stable"' in benchmark
+    assert '"step_latency_ms"' in benchmark
+    assert '"policy_inference_ms"' in benchmark
+    assert '"pre_physics"' in benchmark
+    assert '"apply_action"' in benchmark
+    assert '"observation"' in benchmark
+    assert '"physics_render_wrapper_residual"' in benchmark
+    assert "runner.learn" not in benchmark and "optimizer" not in benchmark
