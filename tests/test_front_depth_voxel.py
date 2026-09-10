@@ -62,6 +62,8 @@ def test_voxel_variant_keeps_image_variant_and_uses_distinct_task():
     assert "Isaac-UAV-NavRL-V6-Front-Depth-M1-v0" in registry
     assert "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-v0" in registry
     assert '"front_voxel": [3, *voxel_grid_shape]' in environment
+    assert '"internal_state": 8' in environment
+    assert '"dynamic_obstacles": [5, 10]' in environment
     assert "V6FrontDepthCameraEnvCfg" in environment
     assert '"dynamic_obstacles"' in environment
     assert 'experiment_name = "uav_v6_front_depth_voxel"' in runner

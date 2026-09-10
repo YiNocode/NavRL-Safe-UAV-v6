@@ -21,11 +21,8 @@ class V6FrontDepthVoxelEnvCfg(V6FrontDepthCameraEnvCfg):
     voxel_free_samples = 16
     observation_space = {
         "front_voxel": [3, *voxel_grid_shape],
-        "internal_state": V6FrontDepthCameraEnvCfg.internal_state_dim,
-        "dynamic_obstacles": [
-            V6FrontDepthCameraEnvCfg.max_dynamic_tracks,
-            V6FrontDepthCameraEnvCfg.dynamic_state_dim,
-        ],
+        "internal_state": 8,
+        "dynamic_obstacles": [5, 10],
     }
 
 
