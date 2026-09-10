@@ -11,6 +11,7 @@ from isaaclab.app import AppLauncher
 
 TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-M1-v0"
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--task", default=TASK_ID)
 parser.add_argument("--checkpoint", type=Path, required=True)
 parser.add_argument("--episodes", type=int, default=500)
 parser.add_argument("--num_envs", type=int, default=64)
@@ -53,13 +54,13 @@ def main() -> None:
     if args.episodes <= 0 or args.num_envs <= 0:
         raise ValueError("episodes and num_envs must be positive")
 
-    env_cfg = parse_env_cfg(TASK_ID, device=args.device, num_envs=args.num_envs)
+    env_cfg = parse_env_cfg(args.task, device=args.device, num_envs=args.num_envs)
     env_cfg.seed = args.seed
-    agent_cfg = load_cfg_from_registry(TASK_ID, "rsl_rl_cfg_entry_point")
+    agent_cfg = load_cfg_from_registry(args.task, "rsl_rl_cfg_entry_point")
     agent_cfg.seed = args.seed
     agent_cfg.device = args.device
     env = RslRlVecEnvWrapper(
-        gym.make(TASK_ID, cfg=env_cfg), clip_actions=agent_cfg.clip_actions
+        gym.make(args.task, cfg=env_cfg), clip_actions=agent_cfg.clip_actions
     )
     runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
     runner.load(str(checkpoint), load_optimizer=False)
@@ -107,7 +108,7 @@ def main() -> None:
                 episode_steps[env_id] = 0
 
         result = {
-            "task": TASK_ID,
+            "task": args.task,
             "checkpoint": str(checkpoint),
             "checkpoint_sha256": _sha256(checkpoint),
             "deterministic_policy": True,
@@ -133,7 +134,11 @@ def main() -> None:
             ) / completed,
             "mean_valid_dynamic_tracks": _mean(mean_dynamic_tracks),
             "simulator_truth_policy_input": truth_leak_seen,
-            "perception": "rtx_front_depth_and_gpu_temporal_tracking",
+            "perception": (
+                "rtx_front_depth_to_gpu_local_voxel_and_temporal_tracking"
+                if "Voxel" in args.task
+                else "rtx_front_depth_and_gpu_temporal_tracking"
+            ),
             "control": "direct_root_velocity",
         }
         print(json.dumps(result, indent=2))

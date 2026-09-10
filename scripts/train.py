@@ -132,9 +132,14 @@ def main() -> None:
             "input=depth->GPU voxel/raycast/motion tracks, control=direct velocity, "
             "ROS2=false, PX4=false, action shield=false",flush=True)
     else:
+        static_pipeline = (
+            "front_depth->local_voxel_3x16x32x32->128"
+            if "front_voxel" in raw.cfg.observation_space
+            else "front_depth->128"
+        )
         print(
             f"[V6] envs={raw.num_envs}, device={raw.device}, "
-            "front_depth->128 + dynamic_5x10->64 + internal_8 = fused_200, "
+            f"{static_pipeline} + dynamic_5x10->64 + internal_8 = fused_200, "
             "simulator_truth_policy_input=false",flush=True)
     training_finished = False
     try:
