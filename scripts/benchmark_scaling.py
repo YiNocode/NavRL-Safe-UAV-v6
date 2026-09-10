@@ -10,6 +10,7 @@ from isaaclab.app import AppLauncher
 
 V5_TASK_ID = "Isaac-UAV-NavRL-V5-GPU-Direct-v0"
 V6_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-M1-v0"
+V6_VOXEL_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-v0"
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--task", default=V6_TASK_ID)
 parser.add_argument("--num_envs", type=int, default=32)
@@ -132,18 +133,24 @@ def main() -> None:
             ) / args_cli.camera_read_repetitions
             camera_output_mib = depth.numel() * depth.element_size() / 1024**2
 
-        if args_cli.task == V6_TASK_ID:
+        if args_cli.task in (V6_TASK_ID, V6_VOXEL_TASK_ID):
             from tensordict import TensorDict
-            from navrl_uav_v5.tasks.navrl_navigation.agents.v6_actor_critic import (
-                V6NavRLActorCritic,
-            )
-
+            if args_cli.task == V6_VOXEL_TASK_ID:
+                from navrl_uav_v5.tasks.navrl_navigation.agents.v6_voxel_actor_critic import (
+                    V6VoxelNavRLActorCritic as PolicyClass,
+                )
+                static_key = "front_voxel"
+            else:
+                from navrl_uav_v5.tasks.navrl_navigation.agents.v6_actor_critic import (
+                    V6NavRLActorCritic as PolicyClass,
+                )
+                static_key = "front_depth"
             obs_groups = {
-                "policy": ["front_depth", "internal_state", "dynamic_obstacles"],
-                "critic": ["front_depth", "internal_state", "dynamic_obstacles"],
+                "policy": [static_key, "internal_state", "dynamic_obstacles"],
+                "critic": [static_key, "internal_state", "dynamic_obstacles"],
             }
             policy_observations = TensorDict(observations, batch_size=[args_cli.num_envs])
-            policy = V6NavRLActorCritic(
+            policy = PolicyClass(
                 policy_observations, obs_groups, 3,
                 camera_near_m=cfg.camera_near_m, camera_far_m=cfg.camera_far_m,
             ).to(device).eval()

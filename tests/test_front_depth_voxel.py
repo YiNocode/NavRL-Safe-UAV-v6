@@ -59,6 +59,7 @@ def test_voxel_variant_keeps_image_variant_and_uses_distinct_task():
     registry = (ROOT / "source/navrl_uav_v5/navrl_uav_v5/tasks/navrl_navigation/__init__.py").read_text()
     environment = (ROOT / "source/navrl_uav_v5/navrl_uav_v5/tasks/navrl_navigation/v6_voxel_env.py").read_text()
     runner = (ROOT / "source/navrl_uav_v5/navrl_uav_v5/tasks/navrl_navigation/agents/v6_voxel_rsl_rl_ppo_cfg.py").read_text()
+    benchmark = (ROOT / "scripts/benchmark_scaling.py").read_text()
     assert "Isaac-UAV-NavRL-V6-Front-Depth-M1-v0" in registry
     assert "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-v0" in registry
     assert '"front_voxel": [3, *voxel_grid_shape]' in environment
@@ -68,3 +69,5 @@ def test_voxel_variant_keeps_image_variant_and_uses_distinct_task():
     assert '"dynamic_obstacles"' in environment
     assert 'experiment_name = "uav_v6_front_depth_voxel"' in runner
     assert '["front_voxel", "internal_state", "dynamic_obstacles"]' in runner
+    assert "V6_VOXEL_TASK_ID" in benchmark
+    assert "V6VoxelNavRLActorCritic as PolicyClass" in benchmark
