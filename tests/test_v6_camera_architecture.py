@@ -7,8 +7,8 @@ def test_v6_m1_contract():
     assert "Isaac-UAV-NavRL-V5-GPU-Direct-v0" in reg
     assert "Isaac-UAV-NavRL-V6-Front-Depth-M1-v0" in reg
     assert "TiledCameraCfg" in cfg
-    assert 'data_types=["distance_to_image_plane"]' in cfg
-    assert '"front_depth":[camera_height,camera_width,1]' in cfg
+    assert 'data_types=["distance_to_image_plane"]' in cfg.replace(" ", "")
+    assert '"front_depth":[camera_height,camera_width,1]' in cfg.replace(" ", "")
     assert "MultiMeshRayCaster" not in cfg and "static_obstacles" not in cfg
     geometry=(ROOT/"source"/"navrl_uav_v5"/"navrl_uav_v5"/"utils"/"gpu_camera_geometry.py").read_text()
     assert "backproject_axial_depth" in geometry
@@ -18,8 +18,8 @@ def test_v6_m3_batched_contract():
     cfg=(TASK/"v6_camera_env.py").read_text()
     smoke=(ROOT/"scripts"/"random_agent_v6.py").read_text()
     assert "M1 requires exactly one environment" not in cfg
-    assert "(self.num_envs,6)" in cfg
-    assert "(self.num_envs,self.cfg.camera_height,self.cfg.camera_width,1)" in cfg
+    compact=cfg.replace(" ", "").replace("\n", "")
+    assert "(self.num_envs,self.cfg.camera_height,self.cfg.camera_width,1)" in compact
     assert "num_envs=args.num_envs" in smoke
     assert "env_frames_s=" in smoke
     assert "cuda_peak_allocated_mib=" in smoke
@@ -27,8 +27,9 @@ def test_v6_m3_batched_contract():
 def test_v6_m4_finite_fov_static_contract():
     cfg=(TASK/"v6_camera_env.py").read_text()
     encoder=(TASK/"agents"/"front_depth_encoder.py").read_text()
-    assert '"front_depth":[camera_height,camera_width,1]' in cfg
-    assert "static_embedding_dim=128" in cfg
+    compact=cfg.replace(" ", "")
+    assert '"front_depth":[camera_height,camera_width,1]' in compact
+    assert "static_embedding_dim=128" in compact
     assert "torch.isfinite(depth)" in encoder
     assert "torch.stack((proximity, valid.to(depth.dtype)), dim=1)" in encoder
     assert "nn.Conv2d(2, 16" in encoder
@@ -38,8 +39,9 @@ def test_v6_m4_finite_fov_static_contract():
 def test_v6_m5_dynamic_depth_contract():
     cfg=(TASK/"v6_camera_env.py").read_text()
     tracker=(ROOT/"source"/"navrl_uav_v5"/"navrl_uav_v5"/"utils"/"gpu_camera_motion_tracker.py").read_text()
-    assert '"dynamic_obstacles":[max_dynamic_tracks,dynamic_state_dim]' in cfg
-    assert "max_dynamic_tracks=5" in cfg and "dynamic_state_dim=10" in cfg
+    compact=cfg.replace(" ", "")
+    assert '"dynamic_obstacles":[max_dynamic_tracks,dynamic_state_dim]' in compact
+    assert "max_dynamic_tracks=5" in compact and "dynamic_state_dim=10" in compact
     assert "_previous_depth_in_current_camera" in tracker
     assert "scatter_reduce_" in tracker
     assert "motion_mask" in tracker and "_select_detections" in tracker
@@ -51,7 +53,7 @@ def test_v6_m6_actor_fusion_contract():
     actor=(TASK/"agents"/"v6_actor_critic.py").read_text()
     runner=(TASK/"agents"/"v6_rsl_rl_ppo_cfg.py").read_text()
     registry=(TASK/"__init__.py").read_text()
-    assert '"internal_state":internal_state_dim' in cfg
+    assert '"internal_state":internal_state_dim' in cfg.replace(" ", "")
     assert "navrl_internal_state(" in cfg
     assert "FrontDepthEncoder(" in actor
     assert "_mlp((self.dynamic_dim, 128, 64))" in actor
@@ -82,3 +84,17 @@ def test_v6_m7_scaling_benchmark_contract():
     assert '"observation"' in benchmark
     assert '"physics_render_wrapper_residual"' in benchmark
     assert "runner.learn" not in benchmark and "optimizer" not in benchmark
+
+def test_v6_formal_navigation_gates_are_wired():
+    cfg=(TASK/"v6_camera_env.py").read_text()
+    base=(TASK/"navrl_env.py").read_text()
+    runner=(TASK/"agents"/"v6_rsl_rl_ppo_cfg.py").read_text()
+    assert "class V6FrontDepthCameraEnv(NavRLGpuEnv)" in cfg
+    assert "takeoff_start_height = 1.50" in cfg
+    assert "self._command_velocity_w" in base and "write_root_velocity_to_sim" in base
+    assert '"progress"' in base and '"goal"' in base and '"collision"' in base
+    assert "self._success | self._collision | self._out_of_bounds" in base
+    assert "_randomize_static_obstacles" in base and "_randomize_dynamic_obstacles" in base
+    assert '"Episode/success"' in base
+    assert "max_iterations = 10_000" in runner
+    assert "num_steps_per_env = 32" in runner

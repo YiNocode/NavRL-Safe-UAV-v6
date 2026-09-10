@@ -45,12 +45,13 @@ class NavRLGpuEnv(DirectRLEnv):
     cfg: NavRLGpuEnvCfg
 
     def __init__(self, cfg: NavRLGpuEnvCfg, render_mode: str | None = None, **kwargs):
-        expected_static = (
-            int(round(cfg.raycasting.horizontal_fov / cfg.raycasting.horizontal_angle_step)),
-            int(round(cfg.raycasting.vertical_fov / cfg.raycasting.vertical_angle_step)) + 1,
-        )
-        if tuple(cfg.observation_space["static_obstacles"]) != expected_static:
-            raise ValueError("static observation declaration does not match ray configuration")
+        if "static_obstacles" in cfg.observation_space:
+            expected_static = (
+                int(round(cfg.raycasting.horizontal_fov / cfg.raycasting.horizontal_angle_step)),
+                int(round(cfg.raycasting.vertical_fov / cfg.raycasting.vertical_angle_step)) + 1,
+            )
+            if tuple(cfg.observation_space["static_obstacles"]) != expected_static:
+                raise ValueError("static observation declaration does not match ray configuration")
         if cfg.static_pool_size < cfg.num_static_obstacles:
             raise ValueError("static_pool_size must be at least num_static_obstacles")
         if cfg.dynamic_pool_size <= 0 or cfg.dynamic_pool_size % 8 != 0:
@@ -88,25 +89,7 @@ class NavRLGpuEnv(DirectRLEnv):
         super().__init__(cfg, render_mode, **kwargs)
 
         init_phase_start = time.perf_counter()
-        self._perception = GpuNavRLPerception(
-            self.num_envs,
-            voxel_size=cfg.voxel.voxel_size,
-            map_size=cfg.voxel.map_size,
-            map_origin_local=cfg.voxel.origin_local,
-            horizontal_fov=cfg.raycasting.horizontal_fov,
-            horizontal_angle_step=cfg.raycasting.horizontal_angle_step,
-            vertical_fov=cfg.raycasting.vertical_fov,
-            vertical_angle_step=cfg.raycasting.vertical_angle_step,
-            max_distance=cfg.raycasting.max_distance,
-            no_hit_offset=cfg.raycasting.no_hit_offset,
-            max_dynamic_tracks=cfg.motion.max_tracks,
-            motion_threshold=cfg.motion.motion_threshold,
-            association_distance=cfg.motion.association_distance,
-            velocity_smoothing=cfg.motion.velocity_smoothing,
-            device=self.device,
-        )
-        if self._perception.output_shape != tuple(cfg.observation_space["static_obstacles"]):
-            raise RuntimeError("GPU perception output shape differs from the observation space")
+        self._initialize_perception()
         print(f"[V5 INIT] perception buffers: {time.perf_counter() - init_phase_start:.2f}s", flush=True)
 
         self._actions = torch.full((self.num_envs, 3), 0.5, device=self.device)
@@ -120,7 +103,7 @@ class NavRLGpuEnv(DirectRLEnv):
         self._previous_actions = torch.full_like(self._actions, 0.5)
         self._previous_position_w = torch.zeros((self.num_envs, 3), device=self.device)
 
-        static_shape = tuple(cfg.observation_space["static_obstacles"])
+        static_shape = self._static_buffer_shape()
         self._static_raw = torch.full(
             (self.num_envs, *static_shape),
             cfg.raycasting.max_distance + cfg.raycasting.no_hit_offset,
@@ -213,6 +196,46 @@ class NavRLGpuEnv(DirectRLEnv):
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
             torch.backends.cudnn.benchmark = True
+
+    def _initialize_perception(self) -> None:
+        """Create the V5 ray/voxel perception backend.
+
+        V6 overrides this hook while retaining the navigation task mechanics.
+        """
+        cfg = self.cfg
+        self._perception = GpuNavRLPerception(
+            self.num_envs,
+            voxel_size=cfg.voxel.voxel_size,
+            map_size=cfg.voxel.map_size,
+            map_origin_local=cfg.voxel.origin_local,
+            horizontal_fov=cfg.raycasting.horizontal_fov,
+            horizontal_angle_step=cfg.raycasting.horizontal_angle_step,
+            vertical_fov=cfg.raycasting.vertical_fov,
+            vertical_angle_step=cfg.raycasting.vertical_angle_step,
+            max_distance=cfg.raycasting.max_distance,
+            no_hit_offset=cfg.raycasting.no_hit_offset,
+            max_dynamic_tracks=cfg.motion.max_tracks,
+            motion_threshold=cfg.motion.motion_threshold,
+            association_distance=cfg.motion.association_distance,
+            velocity_smoothing=cfg.motion.velocity_smoothing,
+            device=self.device,
+        )
+        if self._perception.output_shape != tuple(cfg.observation_space["static_obstacles"]):
+            raise RuntimeError("GPU perception output shape differs from the observation space")
+
+    def _static_buffer_shape(self) -> tuple[int, ...]:
+        return tuple(self.cfg.observation_space["static_obstacles"])
+
+    def _setup_perception_sensor(self) -> None:
+        self._depth_sensor = MultiMeshRayCaster(self.cfg.depth_sensor)
+        self.scene.sensors["depth_sensor"] = self._depth_sensor
+
+    def _reset_perception(self, env_ids: torch.Tensor) -> None:
+        self._depth_sensor.reset(env_ids)
+        self._perception.reset(env_ids)
+
+    def _perception_memory_bytes(self) -> int:
+        return self._perception.map.memory_bytes
 
     def _setup_scene(self) -> None:
         self._drone = Articulation(self.cfg.drone)
@@ -309,8 +332,7 @@ class NavRLGpuEnv(DirectRLEnv):
         self.scene.clone_environments(copy_from_source=False)
         if self.device == "cpu":
             self.scene.filter_collisions(global_prim_paths=["/World/ground"])
-        self._depth_sensor = MultiMeshRayCaster(self.cfg.depth_sensor)
-        self.scene.sensors["depth_sensor"] = self._depth_sensor
+        self._setup_perception_sensor()
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
 
@@ -937,8 +959,7 @@ class NavRLGpuEnv(DirectRLEnv):
             None,
             ids,
         )
-        self._depth_sensor.reset(ids)
-        self._perception.reset(ids)
+        self._reset_perception(ids)
 
         initial_distance = torch.linalg.vector_norm(self._start_to_goal_w[ids], dim=-1)
         self._previous_goal_distance[ids] = initial_distance
@@ -994,7 +1015,7 @@ class NavRLGpuEnv(DirectRLEnv):
             ).mean(),
             "Perception/simulator_truth_policy_input": 0.0,
             "Performance/parallel_envs": float(self.num_envs),
-            "Performance/voxel_map_mib": self._perception.map.memory_bytes / (1024.0**2),
+            "Performance/voxel_map_mib": self._perception_memory_bytes() / (1024.0**2),
         }
         for name in self._reward_component_names:
             log[f"Episode_Reward/{name}"] = self._episode_reward_sums[name][ids].mean()
@@ -1013,7 +1034,7 @@ class NavRLGpuEnv(DirectRLEnv):
             "dynamic_state": self._dynamic_observation.state.clone(),
             "dynamic_valid": self._dynamic_observation.valid.clone(),
             "internal_state": self._internal_state.clone(),
-            "voxel_map_memory_bytes": self._perception.map.memory_bytes,
+            "voxel_map_memory_bytes": self._perception_memory_bytes(),
         }
 
     def get_randomized_scene_state(self) -> dict[str, torch.Tensor | int]:

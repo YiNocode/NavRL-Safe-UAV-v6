@@ -1,4 +1,4 @@
-"""M6 one-iteration PPO configuration for V6 camera observations."""
+"""Formal PPO configuration for V6 finite-FOV camera observations."""
 
 from isaaclab.utils import configclass
 
@@ -14,13 +14,13 @@ class V6NavRLActorCriticCfg(NavRLActorCriticCfg):
 
 @configclass
 class V6NavRLGpuPPORunnerCfg(NavRLGpuPPORunnerCfg):
-    """Small M6 smoke config; formal training parameters are selected at M8."""
+    """V6 formal runner; CLI overrides remain available for smoke tests."""
 
-    num_steps_per_env = 8
-    max_iterations = 1
-    save_interval = 1
+    num_steps_per_env = 32
+    max_iterations = 10_000
+    save_interval = 250
     experiment_name = "uav_v6_front_depth"
-    run_name = "m6_ppo_smoke"
+    run_name = "formal_camera_navigation"
     obs_groups = {
         "policy": ["front_depth", "internal_state", "dynamic_obstacles"],
         "critic": ["front_depth", "internal_state", "dynamic_obstacles"],
