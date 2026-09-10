@@ -98,3 +98,17 @@ def test_v6_formal_navigation_gates_are_wired():
     assert '"Episode/success"' in base
     assert "max_iterations = 10_000" in runner
     assert "num_steps_per_env = 32" in runner
+
+def test_v6_deterministic_evaluation_contract():
+    evaluation=(ROOT/"scripts"/"evaluate_v6.py").read_text()
+    environment=(TASK/"navrl_env.py").read_text()
+    assert 'TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-M1-v0"' in evaluation
+    assert "get_inference_policy" in evaluation
+    assert '"deterministic_policy": True' in evaluation
+    assert '"success_rate"' in evaluation and '"collision_rate"' in evaluation
+    assert '"timeout_rate"' in evaluation and '"out_of_bounds_rate"' in evaluation
+    assert '"mean_path_length_m"' in evaluation
+    assert '"p05_minimum_front_depth_m"' in evaluation
+    assert '"checkpoint_sha256"' in evaluation
+    assert '"episode_path_length"' in environment
+    assert '"episode_min_static_distance"' in environment

@@ -788,6 +788,12 @@ class NavRLGpuEnv(DirectRLEnv):
                 "timeout": self._time_out.clone(),
                 "final_goal_distance": self._current_goal_distance.clone(),
                 "min_static_distance": minimum_static.clone(),
+                "episode_path_length": self._episode_path_length.clone(),
+                "episode_min_static_distance": self._episode_min_static_distance.clone(),
+                "episode_mean_valid_dynamic_tracks": (
+                    self._episode_valid_dynamic_tracks
+                    / self.episode_length_buf.float().clamp_min(1.0)
+                ).clone(),
                 "valid_dynamic_tracks": self._dynamic_observation.valid.sum(dim=1).clone(),
                 "altitude_m": position_local[:, 2].clone(),
                 "episode_max_altitude_m": self._episode_max_altitude.clone(),
