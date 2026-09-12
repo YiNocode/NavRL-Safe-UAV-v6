@@ -46,12 +46,12 @@ class NavRLGpuPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     }
     clip_actions = 1.0
     best_metric_key = "Episode/success"
-    best_metric_window = 25
+    best_metric_window_episodes = 500
     best_metric_min_delta = 0.002
-    early_stopping_patience = 500
-    early_stopping_warmup = 50
+    early_stopping_min_episodes = 5_000
+    early_stopping_patience_episodes = 10_000
     early_stopping_max_drop = 0.08
-    early_stopping_degradation_patience = 50
+    early_stopping_degradation_patience_episodes = 2_000
 
     policy = NavRLActorCriticCfg()
     algorithm = NavRLPpoAlgorithmCfg(
