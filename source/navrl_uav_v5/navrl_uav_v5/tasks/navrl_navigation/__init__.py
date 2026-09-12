@@ -7,6 +7,7 @@ V6_M1_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-M1-v0"
 V6_VOXEL_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-v0"
 V6_VOXEL_SAFETY_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-SafetyReward-v0"
 V6_VOXEL_REWARD_V3_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-RewardV3-v0"
+V6_TEMPORAL_VOXEL_V4_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-TemporalVoxel-V4-v0"
 
 if TASK_ID not in gym.registry:
     gym.register(
@@ -75,10 +76,25 @@ if V6_VOXEL_REWARD_V3_TASK_ID not in gym.registry:
         },
     )
 
+if V6_TEMPORAL_VOXEL_V4_TASK_ID not in gym.registry:
+    gym.register(
+        id=V6_TEMPORAL_VOXEL_V4_TASK_ID,
+        entry_point=f"{__name__}.v6_temporal_voxel_env:V6TemporalVoxelEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": f"{__name__}.v6_temporal_voxel_env:V6TemporalVoxelEnvCfg",
+            "rsl_rl_cfg_entry_point": (
+                f"{__name__}.agents.v6_temporal_voxel_rsl_rl_ppo_cfg:"
+                "V6TemporalVoxelPPORunnerCfg"
+            ),
+        },
+    )
+
 __all__ = [
     "TASK_ID",
     "V6_M1_TASK_ID",
     "V6_VOXEL_TASK_ID",
     "V6_VOXEL_SAFETY_TASK_ID",
     "V6_VOXEL_REWARD_V3_TASK_ID",
+    "V6_TEMPORAL_VOXEL_V4_TASK_ID",
 ]

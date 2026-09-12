@@ -7,15 +7,16 @@ import torch.nn as nn
 
 
 class FrontVoxelEncoder(nn.Module):
-    """Encode ``[B,3,Z,Y,X]`` occupied/free/observed voxels to ``[B,128]``."""
+    """Encode channel-first local voxels into a fixed-size embedding."""
 
-    def __init__(self, embedding_dim: int = 128) -> None:
+    def __init__(self, embedding_dim: int = 128, input_channels: int = 3) -> None:
         super().__init__()
-        if embedding_dim <= 0:
-            raise ValueError("embedding_dim must be positive")
+        if embedding_dim <= 0 or input_channels <= 0:
+            raise ValueError("embedding_dim and input_channels must be positive")
         self.embedding_dim = int(embedding_dim)
+        self.input_channels = int(input_channels)
         self.convolutions = nn.Sequential(
-            nn.Conv3d(3, 16, kernel_size=3, stride=2, padding=1),
+            nn.Conv3d(self.input_channels, 16, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
             nn.Conv3d(16, 32, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
@@ -31,8 +32,10 @@ class FrontVoxelEncoder(nn.Module):
         )
 
     def forward(self, front_voxel: torch.Tensor) -> torch.Tensor:
-        if front_voxel.ndim != 5 or front_voxel.shape[1] != 3:
-            raise ValueError("front_voxel must have shape (B,3,Z,Y,X)")
+        if front_voxel.ndim != 5 or front_voxel.shape[1] != self.input_channels:
+            raise ValueError(
+                f"front_voxel must have shape (B,{self.input_channels},Z,Y,X)"
+            )
         if not front_voxel.is_floating_point():
             raise ValueError("front_voxel must be a floating-point tensor")
         features = self.projection(self.convolutions(front_voxel))

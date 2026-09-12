@@ -26,6 +26,7 @@ class V6VoxelNavRLActorCritic(NavRLActorCritic):
         internal_state_dim: int = 8,
         dynamic_observation_count: int = 5,
         dynamic_state_dim: int = 10,
+        voxel_channels: int = 3,
         beta_concentration_scale: float = 1.0,
         actor_obs_normalization: bool = False,
         critic_obs_normalization: bool = False,
@@ -46,6 +47,7 @@ class V6VoxelNavRLActorCritic(NavRLActorCritic):
         self.internal_state_dim = int(internal_state_dim)
         self.dynamic_observation_count = int(dynamic_observation_count)
         self.dynamic_state_dim = int(dynamic_state_dim)
+        self.voxel_channels = int(voxel_channels)
         self.dynamic_dim = self.dynamic_observation_count * self.dynamic_state_dim
         self.beta_concentration_scale = float(beta_concentration_scale)
         self.num_actions = int(num_actions)
@@ -59,8 +61,10 @@ class V6VoxelNavRLActorCritic(NavRLActorCritic):
             if missing:
                 raise ValueError(f"{set_name} observation set is missing {sorted(missing)}")
         batch_size = obs.batch_size[0]
-        if obs["front_voxel"].ndim != 5 or obs["front_voxel"].shape[1] != 3:
-            raise ValueError("front_voxel must have shape (B,3,Z,Y,X)")
+        if obs["front_voxel"].ndim != 5 or obs["front_voxel"].shape[1] != self.voxel_channels:
+            raise ValueError(
+                f"front_voxel must have shape (B,{self.voxel_channels},Z,Y,X)"
+            )
         if obs["internal_state"].shape != (batch_size, self.internal_state_dim):
             raise ValueError("internal_state has an unexpected shape")
         if obs["dynamic_obstacles"].shape != (
@@ -68,7 +72,9 @@ class V6VoxelNavRLActorCritic(NavRLActorCritic):
         ):
             raise ValueError("dynamic_obstacles has an unexpected shape")
 
-        self.static_encoder = FrontVoxelEncoder(self.static_embedding_dim)
+        self.static_encoder = FrontVoxelEncoder(
+            self.static_embedding_dim, input_channels=self.voxel_channels
+        )
         self.dynamic_extractor = _mlp((self.dynamic_dim, 128, 64))
         self.fused_feature_dim = self.static_embedding_dim + 64 + self.internal_state_dim
         if self.fused_feature_dim != 200:

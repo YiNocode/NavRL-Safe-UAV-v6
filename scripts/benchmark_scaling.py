@@ -13,6 +13,7 @@ V6_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-M1-v0"
 V6_VOXEL_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-v0"
 V6_VOXEL_SAFETY_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-SafetyReward-v0"
 V6_VOXEL_REWARD_V3_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-RewardV3-v0"
+V6_TEMPORAL_VOXEL_V4_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-TemporalVoxel-V4-v0"
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--task", default=V6_TASK_ID)
 parser.add_argument("--num_envs", type=int, default=32)
@@ -135,7 +136,12 @@ def main() -> None:
             ) / args_cli.camera_read_repetitions
             camera_output_mib = depth.numel() * depth.element_size() / 1024**2
 
-        voxel_tasks = (V6_VOXEL_TASK_ID, V6_VOXEL_SAFETY_TASK_ID, V6_VOXEL_REWARD_V3_TASK_ID)
+        voxel_tasks = (
+            V6_VOXEL_TASK_ID,
+            V6_VOXEL_SAFETY_TASK_ID,
+            V6_VOXEL_REWARD_V3_TASK_ID,
+            V6_TEMPORAL_VOXEL_V4_TASK_ID,
+        )
         if args_cli.task == V6_TASK_ID or args_cli.task in voxel_tasks:
             from tensordict import TensorDict
             if args_cli.task in voxel_tasks:
@@ -156,6 +162,7 @@ def main() -> None:
             policy = PolicyClass(
                 policy_observations, obs_groups, 3,
                 camera_near_m=cfg.camera_near_m, camera_far_m=cfg.camera_far_m,
+                voxel_channels=observations[static_key].shape[1],
             ).to(device).eval()
             with torch.inference_mode():
                 for _ in range(5):

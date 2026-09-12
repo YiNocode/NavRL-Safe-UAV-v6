@@ -90,13 +90,25 @@ class GpuFrontDepthVoxelizer:
         return flat, inside
 
     @torch.no_grad()
-    def update(self, depth_m: torch.Tensor, intrinsics: torch.Tensor) -> torch.Tensor:
+    def update(
+        self,
+        depth_m: torch.Tensor,
+        intrinsics: torch.Tensor,
+        exclude_occupied_mask: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         if depth_m.shape != (self.num_envs, self.height, self.width, 1):
             raise ValueError("depth_m has an unexpected shape")
         if intrinsics.shape != (self.num_envs, 3, 3):
             raise ValueError("intrinsics has an unexpected shape")
+        if exclude_occupied_mask is not None and exclude_occupied_mask.shape != (
+            self.num_envs, self.height, self.width
+        ):
+            raise ValueError("exclude_occupied_mask has an unexpected shape")
         depth = depth_m[:, self.pixel_v, self.pixel_u, 0]
         valid = torch.isfinite(depth) & (depth >= self.near_m) & (depth <= self.far_m)
+        occupied_valid = valid
+        if exclude_occupied_mask is not None:
+            occupied_valid = valid & ~exclude_occupied_mask[:, self.pixel_v, self.pixel_u]
         safe_depth = torch.where(valid, depth, torch.zeros_like(depth))
         fx = intrinsics[:, 0, 0:1]
         fy = intrinsics[:, 1, 1:2]
@@ -111,7 +123,11 @@ class GpuFrontDepthVoxelizer:
         free = torch.zeros_like(occupied)
         occupied_index, occupied_inside = self._flat_indices(endpoints)
         occupied.scatter_reduce_(
-            1, occupied_index, (valid & occupied_inside).float(), reduce="amax", include_self=True
+            1,
+            occupied_index,
+            (occupied_valid & occupied_inside).float(),
+            reduce="amax",
+            include_self=True,
         )
 
         free_points = endpoints[:, :, None, :] * self.free_fractions[None, None, :, None]

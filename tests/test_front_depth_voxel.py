@@ -55,6 +55,12 @@ def test_front_voxel_encoder_outputs_128_features():
     assert torch.isfinite(output).all()
 
 
+def test_front_voxel_encoder_supports_v4_four_channel_input():
+    encoder = ENCODER.FrontVoxelEncoder(embedding_dim=128, input_channels=4)
+    output = encoder(torch.zeros((2, 4, 16, 32, 32)))
+    assert output.shape == (2, 128)
+
+
 def test_voxel_variant_keeps_image_variant_and_uses_distinct_task():
     registry = (ROOT / "source/navrl_uav_v5/navrl_uav_v5/tasks/navrl_navigation/__init__.py").read_text()
     environment = (ROOT / "source/navrl_uav_v5/navrl_uav_v5/tasks/navrl_navigation/v6_voxel_env.py").read_text()

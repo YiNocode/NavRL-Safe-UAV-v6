@@ -144,7 +144,7 @@ def main() -> None:
             "ROS2=false, PX4=false, action shield=false",flush=True)
     else:
         static_pipeline = (
-            "front_depth->local_voxel_3x16x32x32->128"
+            f"front_depth->local_voxel_{raw.cfg.observation_space['front_voxel']}->128"
             if "front_voxel" in raw.cfg.observation_space
             else "front_depth->128"
         )
