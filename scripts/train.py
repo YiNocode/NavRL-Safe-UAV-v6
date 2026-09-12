@@ -24,6 +24,12 @@ parser.add_argument(
     help="Optional PPO learning-rate override for distribution-shift fine-tuning.",
 )
 parser.add_argument("--run_name", default=None)
+parser.add_argument(
+    "--log_dir",
+    type=Path,
+    default=None,
+    help="Optional exact output directory; must not already contain files.",
+)
 parser.add_argument("--resume", type=Path, default=None)
 parser.add_argument(
     "--reset_optimizer_on_resume",
@@ -88,9 +94,14 @@ def main() -> None:
     if args_cli.run_name:
         agent_cfg.run_name = args_cli.run_name
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    suffix = f"_{agent_cfg.run_name}" if agent_cfg.run_name else ""
-    log_dir = PROJECT_ROOT / "logs" / "rsl_rl" / agent_cfg.experiment_name / f"{timestamp}{suffix}"
+    if args_cli.log_dir is None:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        suffix = f"_{agent_cfg.run_name}" if agent_cfg.run_name else ""
+        log_dir = PROJECT_ROOT / "logs" / "rsl_rl" / agent_cfg.experiment_name / f"{timestamp}{suffix}"
+    else:
+        log_dir = args_cli.log_dir.expanduser().resolve()
+        if log_dir.exists() and any(log_dir.iterdir()):
+            raise FileExistsError(f"--log_dir must be empty or absent: {log_dir}")
     log_dir.mkdir(parents=True, exist_ok=True)
     dump_yaml(str(log_dir / "env.yaml"), env_cfg)
     dump_yaml(str(log_dir / "agent.yaml"), agent_cfg)

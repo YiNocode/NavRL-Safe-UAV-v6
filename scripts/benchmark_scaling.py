@@ -12,6 +12,7 @@ V5_TASK_ID = "Isaac-UAV-NavRL-V5-GPU-Direct-v0"
 V6_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-M1-v0"
 V6_VOXEL_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-v0"
 V6_VOXEL_SAFETY_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-SafetyReward-v0"
+V6_VOXEL_REWARD_V3_TASK_ID = "Isaac-UAV-NavRL-V6-Front-Depth-Voxel-RewardV3-v0"
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--task", default=V6_TASK_ID)
 parser.add_argument("--num_envs", type=int, default=32)
@@ -134,9 +135,10 @@ def main() -> None:
             ) / args_cli.camera_read_repetitions
             camera_output_mib = depth.numel() * depth.element_size() / 1024**2
 
-        if args_cli.task in (V6_TASK_ID, V6_VOXEL_TASK_ID, V6_VOXEL_SAFETY_TASK_ID):
+        voxel_tasks = (V6_VOXEL_TASK_ID, V6_VOXEL_SAFETY_TASK_ID, V6_VOXEL_REWARD_V3_TASK_ID)
+        if args_cli.task == V6_TASK_ID or args_cli.task in voxel_tasks:
             from tensordict import TensorDict
-            if args_cli.task in (V6_VOXEL_TASK_ID, V6_VOXEL_SAFETY_TASK_ID):
+            if args_cli.task in voxel_tasks:
                 from navrl_uav_v5.tasks.navrl_navigation.agents.v6_voxel_actor_critic import (
                     V6VoxelNavRLActorCritic as PolicyClass,
                 )
