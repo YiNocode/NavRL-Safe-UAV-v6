@@ -95,7 +95,6 @@ class V6FrontDepthVoxelRewardV3Env(V6FrontDepthVoxelEnv):
 
     def _get_rewards(self) -> torch.Tensor:
         self._update_perception()
-        relative_goal = self._goal_pos_w - self._drone.data.root_pos_w
         progress = self._previous_goal_distance - self._current_goal_distance
         centered_action = 2.0 * self._actions - 1.0
         command_velocity_g = centered_action.clone()
